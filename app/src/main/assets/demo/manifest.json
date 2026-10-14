@@ -1,0 +1,62 @@
+[
+  {
+    "id": "afterglow-mix",
+    "songId": "afterglow-v1",
+    "stem": "Full mix",
+    "title": "Afterglow on the lake",
+    "filename": "mix.wav",
+    "size": 2822444,
+    "sha256": "756d6c0a05028a85490da0003d015b5a10ffe69d91fa85f517e60cfba6465fc9",
+    "durationMs": 32000,
+    "sampleRate": 44100,
+    "format": "audio/wav"
+  },
+  {
+    "id": "afterglow-drums",
+    "songId": "afterglow-v1",
+    "stem": "Drums",
+    "title": "Afterglow on the lake",
+    "filename": "drums.wav",
+    "size": 2822444,
+    "sha256": "dcdee0ad13ece99cd4dca7f0f9fbb3fd27fda252ce62d72e4e82d7a11b2dcdc3",
+    "durationMs": 32000,
+    "sampleRate": 44100,
+    "format": "audio/wav"
+  },
+  {
+    "id": "afterglow-bass",
+    "songId": "afterglow-v1",
+    "stem": "Bass",
+    "title": "Afterglow on the lake",
+    "filename": "bass.wav",
+    "size": 2822444,
+    "sha256": "5e7459605d3c82f0961cb6fe6e1fa7657933cf77cea8b1438d2d418fdd8ecc62",
+    "durationMs": 32000,
+    "sampleRate": 44100,
+    "format": "audio/wav"
+  },
+  {
+    "id": "afterglow-lead",
+    "songId": "afterglow-v1",
+    "stem": "Plucked lead",
+    "title": "Afterglow on the lake",
+    "filename": "lead.wav",
+    "size": 2822444,
+    "sha256": "3cdaee39ba8320d681cba25318458f28d4f3adf0208236f32805b531c1fc40df",
+    "durationMs": 32000,
+    "sampleRate": 44100,
+    "format": "audio/wav"
+  },
+  {
+    "id": "afterglow-keys",
+    "songId": "afterglow-v1",
+    "stem": "Keys",
+    "title": "Afterglow on the lake",
+    "filename": "keys.wav",
+    "size": 2822444,
+    "sha256": "e5b44ae4c5fd0c824c457f60c6b0ee5ae02ad2ee970094e5f58b7ff775fa7f8e",
+    "durationMs": 32000,
+    "sampleRate": 44100,
+    "format": "audio/wav"
+  }
+]
