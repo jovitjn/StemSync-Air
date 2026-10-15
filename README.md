@@ -1,14 +1,20 @@
-# STEMSYNC AIR
+# StemSync Air
 
 **Your music. Every speaker. Together.**
 
-A guitar part on the phone. Drums on the tablet. The same song, shared over local wireless, with no internet music service in between.
+A guitar part on a phone, drums on a tablet, and both devices following the same musical timeline without an internet music service in between.
 
-StemSync Air is an Android music project built around a musician's question: can the nearby devices we already have become a coordinated listening system? It combines an original instrumental with local file distribution, clock estimation and a host-controlled playback timeline. It is designed for a guitarist and Electrical Engineering master's student interested in wireless communication and DSP.
+I built StemSync Air around a question that connects my interests in music, wireless communication and DSP: can nearby Android devices act like one coordinated speaker system? The app combines local audio transfer, clock estimation and a host-controlled playback timeline. It is written in Kotlin with Jetpack Compose, Google Nearby Connections and AndroidX Media3.
 
-**Current version: 0.2.1 — MP3 import added.** Use **Import song / stems**, select one `.mp3` in the system picker, and wait for local preparation before pressing Play. Install the updated APK on both devices.
+**Current version: 0.2.1 — MP3 import added.**
 
 **Status:** version 0.2.1 installable debug build; implementation and automated validation are documented in [VALIDATION.md](docs/VALIDATION.md). Physical Samsung phone/tablet acceptance and acoustic synchronization remain unverified. No sample-perfect or zero-latency claim is made.
+
+## Download
+
+[Download StemSync Air v0.2.1 for Android](distribution/StemSync-Air-v0.2.1-debug.apk)
+
+This is a debug APK for Android 10 or newer. Its SHA-256 checksum is stored beside it in [`StemSync-Air-v0.2.1-debug.apk.sha256`](distribution/StemSync-Air-v0.2.1-debug.apk.sha256). Install the same version on both devices.
 
 <img src="docs/screenshots/phone-home.png" width="320" alt="StemSync Air home on an Android phone emulator">
 
@@ -25,13 +31,38 @@ StemSync Air is an Android music project built around a musician's question: can
 
 There is no backend, login, recording feature or commercial music integration. Nearby handles local radio transports; this is not Bluetooth-only transfer or continuous audio streaming.
 
+## How the features work
+
+| Feature | What happens internally |
+| --- | --- |
+| Offline room | The host advertises a Nearby Connections `P2P_STAR` service and the guest discovers it. Nearby may choose Bluetooth, Bluetooth Low Energy, Wi-Fi or another local transport. The app does not send audio through a server. |
+| Connection verification | Nearby produces the same short authentication code at both endpoints. The two users compare it and both must approve before the session accepts files or control messages. This reduces the risk of joining the wrong nearby device. |
+| MP3 and WAV import | Android's system file picker gives the app a content URI, so files can be selected from normal local folders and compatible document providers. A single MP3 is decoded locally into PCM16 WAV because deterministic PCM frame counts are easier to validate and synchronize. PCM16 WAV can be used directly. |
+| Stem import | Up to six WAV files can represent instruments from one song. The importer compares sample rate and exact PCM frame count, rather than rounded duration, because equal duration labels do not guarantee aligned sample timelines. The stems must already start at the same musical origin. |
+| Verified transfer | The host sends a session manifest and associates per-file metadata with each audio payload. After receipt, the guest checks the declared byte length and SHA-256 digest, then validates the WAV structure against the manifest. Playback is enabled only after every required file passes these checks and the transfer completes. |
+| Shared playback timeline | Play, pause, seek and stop are represented as revisioned timeline commands. For play or seek, the host sends a target song position and a future deadline on its monotonic clock. The delay gives both devices time to prepare before the audible transition. |
+| Clock synchronization | The guest exchanges timestamp probes with the host. Four monotonic timestamps estimate round-trip time and the difference between the two device clocks. The estimator favors recent low-RTT samples because they are less likely to contain queueing delay. |
+| Connection-quality gate | Playback synchronization requires at least five recent timing samples, RTT no greater than 150 ms, estimated uncertainty no greater than 75 ms and a latest sample no older than 2.5 seconds. An unstable connection therefore cannot be treated as synchronized merely because probes arrived. |
+| Drift correction | Each device compares the expected shared timeline position with Media3's measured player position. Small persistent errors use bounded playback-speed correction; larger sustained errors trigger a seek. This is intentionally conservative to avoid audible speed changes and oscillation. |
+| Per-device output | Each device can play the full mix or one aligned stem. Volume and a manual ±300 ms speaker-delay adjustment remain local, which lets the user compensate for a device's output pipeline or physical speaker placement. |
+| Reconnect and cache | Received files are kept in app-private storage. Before reuse, every required file is rehashed and its WAV metadata is validated against the current manifest. Playback timing is measured again for the new connection. |
+
+The clock calculation is similar to a compact NTP exchange. If the guest sends at `t1`, the host receives at `t2`, the host replies at `t3`, and the guest receives at `t4`:
+
+```text
+hostMinusGuest = ((t2 - t1) + (t3 - t4)) / 2
+networkRTT     = (t4 - t1) - (t3 - t2)
+```
+
+All four values come from monotonic clocks, so a wall-clock correction or time-zone change cannot move the playback schedule. The method assumes roughly symmetric path delay. Android scheduling, decoding and speaker latency remain additional sources of error, which is why I describe the result as synchronized playback rather than sample-accurate audio.
+
 ## Install and listen
 
-Use **stemsync-air-debug.apk** from the delivery folder. Minimum Android version is 10. Google Play services must be installed and working before going offline. Copy the APK to both devices, open it in their file managers and allow installation from that source if prompted. For USB installation:
+Minimum Android version is 10. Google Play services must be installed and working before going offline. Copy the downloaded APK to both devices, open it in their file managers and allow installation from that source if prompted. For USB installation:
 
 ```sh
-adb -s PHONE_SERIAL install -r stemsync-air-debug.apk
-adb -s TABLET_SERIAL install -r stemsync-air-debug.apk
+adb -s PHONE_SERIAL install -r StemSync-Air-v0.2.1-debug.apk
+adb -s TABLET_SERIAL install -r StemSync-Air-v0.2.1-debug.apk
 adb -s PHONE_SERIAL shell am start -n air.stemsync/.MainActivity
 ```
 
@@ -71,20 +102,11 @@ export ANDROID_HOME=/path/to/android-sdk
 
 The built APK is `app/build/outputs/apk/debug/app-debug.apk`. First-time dependency resolution requires internet; using the installed app does not require an application server. Pinned stable dependencies are listed in the build files. The tested toolchain uses Gradle 8.13, AGP 8.13.2, Kotlin 2.3.20, Nearby 19.3.0 and Media3 1.9.4. Version-update lint warnings are retained rather than hidden.
 
-## Architecture and synchronization
+## Architecture
 
 `SessionViewModel` coordinates a StateFlow UI, Nearby transport, private audio library and Media3 player. The pure Kotlin `core` package contains protocol validation, connection consent, transfer-order gating, the clock estimator, timeline store and drift controller. Compose uses a scrollable phone layout and a two-column player at tablet widths.
 
-For guest send/receive timestamps t1/t4 and host receive/send timestamps t2/t3:
-
-```
-hostMinusGuest = ((t2 - t1) + (t3 - t4)) / 2
-networkRTT    = (t4 - t1) - (t3 - t2)
-```
-
-All timestamps use monotonic nanoseconds. The estimator prefers recent low-RTT samples and slews active updates. Playback readiness also requires five recent samples, RTT ≤150 ms, a network uncertainty budget ≤75 ms and a latest sample ≤2.5 seconds old. These conservative thresholds do not describe acoustic accuracy. The host schedules transitions one second ahead; guests translate the shared host timeline using their offset estimate. A revision prevents older playback commands from overwriting new ones. Drift is evaluated against Media3's player position, with bounded speed correction and occasional sustained-error seeks.
-
-These estimates are affected by asymmetric links, callback scheduling, decoder behavior and unknown speaker latency. See [ENGINEERING.md](docs/ENGINEERING.md) for equations, sign conventions, permission decisions, transfer safety, lifecycle behavior and trade-offs.
+The host schedules transitions one second ahead; guests translate the shared host timeline through their offset estimates. Every manifest and playback command carries a revision so an older asynchronous scan or delayed network message cannot overwrite newer song state. See [ENGINEERING.md](docs/ENGINEERING.md) for the protocol, sign conventions, permission decisions, transfer safety and lifecycle trade-offs.
 
 <img src="docs/screenshots/tablet-player.png" width="800" alt="Real tablet emulator session after transferred files, host seek and guest drum selection">
 
@@ -119,12 +141,6 @@ Planned work:
 Nearby may use Bluetooth, Bluetooth Low Energy, Wi-Fi or another local transport selected by Google Play services. The app will continue to require Bluetooth and Wi-Fi to be enabled, but it will not claim that every transfer uses Bluetooth when the SDK does not expose that choice.
 
 This roadmap is a design target, not functionality in version 0.2.1. The shipped and validated scope remains one host plus one guest.
-
-## CV-ready project description
-
-> Built StemSync Air, a Kotlin/Jetpack Compose Android application for authenticated offline music transfer and synchronized playback between nearby devices. Implemented Nearby Connections file exchange, SHA-256 integrity verification, monotonic clock-offset/RTT estimation, future-timestamped playback commands, drift correction, MP3-to-PCM conversion, Media3 playback, responsive phone/tablet UI, and 100 automated test executions across unit and emulator suites. Designing the next release for one-host/multi-guest sessions with per-device latency estimation and barrier-scheduled seek synchronization.
-
-This wording deliberately separates implemented work from the planned multi-device release.
 
 ## License
 
