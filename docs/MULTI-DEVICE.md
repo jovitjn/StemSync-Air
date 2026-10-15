@@ -1,85 +1,206 @@
-# Multi-device synchronization
+# Multi-device synchronization protocol
 
-## Development status
+## Session model
 
-The equal-participant multi-device implementation was completed in a separate working copy on 16 October 2026 and is undergoing teammate verification. This document records the implemented design. The public source and APK in this repository remain version 0.2.1 until that review is complete and the new files are committed.
+StemSync Air treats every connected device as an equal participant. Any participant can request playback changes, import music or become the session coordinator.
 
-## Equal participants with one temporary coordinator
+The coordinator is a temporary protocol role. It provides:
 
-Every connected device has the same application-level permissions. Any participant can request play, pause, seek or a song change. The group still elects one temporary coordinator because a synchronized timeline needs one ordered sequence of commands and one clock reference at any instant.
+- One monotonic clock reference.
+- One ordered stream of playback revisions.
+- Serialization of simultaneous participant requests.
+- Collection of preparation and timing acknowledgements.
+- Selection of shared future deadlines.
 
-The coordinator is a protocol role rather than a privileged user. It receives action requests, assigns monotonically increasing revisions and broadcasts the committed result. If two participants seek at nearly the same time, their requests become consecutive revisions instead of competing timelines.
+This avoids conflicting timelines without creating a permanent privileged host.
 
-Every message that changes playback carries:
+## Participant state
+
+State is stored independently for every endpoint:
 
 ```text
-session ID
+participant ID
+authentication state
+connection generation
 coordinator term
-playback revision
-requesting device ID
+manifest revision
+transfer state
+audio preparation state
+clock offset
+round-trip time
+timing uncertainty
+latest acknowledged playback revision
+```
+
+Disconnecting or slowing one participant cannot overwrite another participant's transfer, readiness or acknowledgement state.
+
+## Coordinator terms and command revisions
+
+The group assigns each coordinator a monotonically increasing term. Playback actions receive monotonically increasing revisions within that term.
+
+The ordering key is:
+
+```text
+(coordinatorTerm, playbackRevision)
+```
+
+A participant accepts only a key newer than the last accepted key. Duplicate messages are acknowledged without replaying the action. Messages from an older coordinator term are rejected.
+
+Any participant may send:
+
+```text
+ACTION_REQUEST(
+    requesterId,
+    action,
+    songId,
+    targetPositionMs
+)
+```
+
+The coordinator validates and serializes requests before issuing a new revision.
+
+## Clock model
+
+Every participant measures its clock relative to the coordinator. For participant send and receive times `t1` and `t4`, and coordinator receive and reply times `t2` and `t3`:
+
+```text
+theta = ((t2 - t1) + (t3 - t4)) / 2
+rtt   = (t4 - t1) - (t3 - t2)
+```
+
+`theta` is coordinator time minus participant time:
+
+```text
+coordinatorNow = participantNow + theta
+participantDeadline = coordinatorDeadline - theta
+```
+
+The estimator selects recent low-RTT samples and tracks uncertainty from half-RTT, offset disagreement and sample age. All calculations use monotonic nanoseconds.
+
+## Prepare/commit barrier
+
+Play, seek and song-change operations follow the same state machine:
+
+```text
+REQUESTED
+    ↓
+PREPARING
+    ↓
+PREPARED
+    ↓
+COMMITTED
+    ↓
+PLAYING or PAUSED
+```
+
+The coordinator broadcasts:
+
+```text
+PREPARE(
+    coordinatorTerm,
+    playbackRevision,
+    songId,
+    targetPositionMs,
+    desiredState
+)
+```
+
+Each participant verifies the manifest and files, prepares the selected local mix or stem, seeks to the target and refreshes its clock estimate. It then responds:
+
+```text
+PREPARED(
+    coordinatorTerm,
+    playbackRevision,
+    measuredPreparationMs,
+    rttNs,
+    uncertaintyNs
+)
+```
+
+The coordinator calculates a deadline from the slowest accepted readiness budget:
+
+```text
+budget[i] = preparation[i]
+          + rtt[i] / 2
+          + uncertainty[i]
+          + schedulerMargin
+
+startDelay = max(minimumDelay, max(budget[i]))
+deadline = coordinatorNow + startDelay
+```
+
+It then broadcasts:
+
+```text
+COMMIT(
+    coordinatorTerm,
+    playbackRevision,
+    targetPositionMs,
+    effectiveCoordinatorTimeNs
+)
+```
+
+Every participant translates the deadline into its own clock. A late participant does not start behind the group; it reports a missed deadline and waits for a new synchronization point.
+
+## Coordinator election and recovery
+
+Participants monitor coordinator heartbeats. When the coordinator disappears, the remaining group pauses playback and begins a new election term.
+
+The winner is selected deterministically from:
+
+```text
+(electionTerm, electionPriority, stableDeviceId)
+```
+
+The new coordinator announces its term and the latest committed playback key. Participants discard clock estimates tied to the previous coordinator, exchange fresh timing probes and prepare the last committed song position. Playback resumes through a new prepare/commit barrier.
+
+This prevents split-brain playback: a device never continues executing commands from two coordinator terms.
+
+## Content distribution
+
+Audio uses content-addressed storage. A manifest describes every required file using:
+
+```text
 song ID
-target position
-effective coordinator time
+content ID
+stem name
+safe display name
+byte length
+sample rate
+PCM frame count
+duration
+SHA-256
 ```
 
-A participant rejects a message from an older coordinator term or a playback revision it has already applied. This makes duplicates harmless and prevents delayed commands from overwriting newer state.
+Files are shared with participants that do not already have verified matching content. Transfer state is scoped to both participant and manifest revision. Completion for one participant cannot mark another participant ready.
 
-## Per-device clock estimation
+The receiver validates payload completion, length, SHA-256, RIFF structure, PCM format, sample rate and frame count before acknowledging readiness.
 
-Each participant estimates its clock relative to the current coordinator. Pairwise measurements between every possible device are unnecessary: all devices can align transitively to the same reference in O(N) measurement relationships rather than O(N²).
+## Drift control
 
-For participant send/receive timestamps `t1` and `t4`, and coordinator receive/send timestamps `t2` and `t3`:
+After the shared deadline, expected playback position is:
 
 ```text
-coordinatorMinusParticipant = ((t2 - t1) + (t3 - t4)) / 2
-networkRTT                  = (t4 - t1) - (t3 - t2)
+expectedMs = basePositionMs
+           + max(0, estimatedCoordinatorNow - effectiveTimeNs) / 1e6
 ```
 
-If the coordinator chooses future deadline `T`, participant `i` schedules against its local monotonic clock at:
+The error signal is:
 
 ```text
-localDeadline[i] = T - coordinatorMinusParticipant[i]
+errorMs = playerCurrentPositionMs - expectedMs
 ```
 
-The estimator prefers recent low-RTT samples and records timing uncertainty. A wall-clock or time-zone change cannot disturb the schedule because the protocol uses monotonic clocks.
+A deadband ignores small measurement noise. Repeated moderate errors use bounded speed correction, while sustained large errors seek to the shared target. A new playback revision resets accumulated correction state.
 
-## Preparing a seek or song change
+## Transport boundary
 
-A playback change uses two phases.
+Nearby Connections supplies offline encrypted discovery and transport. Its star topology supports one physical hub with several connected spokes. Application-level coordinator and control permissions remain independent of that temporary transport role.
 
-1. Any participant submits an action request to the coordinator.
-2. The coordinator creates a new term/revision pair and broadcasts `PREPARE` with the song and target position.
-3. Every participant verifies the requested content, pauses, loads the correct file, seeks to the target and waits until its player and clock estimator are ready.
-4. Each participant returns `PREPARED` with its revision and current timing quality.
-5. The coordinator chooses a future deadline from the slowest accepted participant's preparation time, half-RTT, clock uncertainty and a scheduler safety margin.
-6. The coordinator broadcasts `COMMIT` with the target position and effective coordinator time.
-7. Every prepared participant translates that deadline into its own clock and starts from the requested position.
+When the physical hub leaves, participants re-form the local topology around the newly elected coordinator. Nearby may use Bluetooth, BLE, Wi-Fi or another local transport; the application does not force a Bluetooth-only data channel.
 
-A participant that receives the commit too late does not begin audibly behind the group. It remains paused, reports that it missed the deadline and joins at a later synchronization point.
+## Acoustic boundary
 
-## Coordinator changes
+Clock alignment schedules application-level player actions. It cannot directly observe decoder buffers, audio-mixer latency, DAC latency, vendor speaker processing or sound propagation through the room.
 
-Participants monitor coordinator heartbeats. If the coordinator leaves or becomes unreachable, playback pauses and the remaining devices start a new election term. The winner is chosen deterministically from election term, priority and stable device ID.
-
-Clock estimates from the previous coordinator are discarded. The group measures fresh offsets, verifies the last committed song and position, and uses the same prepare/commit barrier to resume. Commands from the previous term remain invalid even if they arrive after reconnection.
-
-## Audio and transport limits
-
-Nearby Connections provides the offline topology and may use Bluetooth, Bluetooth Low Energy, Wi-Fi or another local transport selected by Google Play services. The application cannot force or report a Bluetooth-only data path through that API.
-
-Network-clock alignment does not remove decoder, Android scheduler, DAC, speaker-processing or acoustic propagation delay. Logical timeline tests therefore need to be followed by physical recordings and cross-correlation measurements across several real devices. Per-device speaker-delay calibration remains necessary for tighter audible alignment.
-
-## Verification gate
-
-The release should not replace v0.2.1 until review covers:
-
-- Three or more physical Android devices in one session.
-- Simultaneous control requests and deterministic ordering.
-- Repeated seeks and song changes during playback.
-- Slow preparation, missed deadlines and participant removal.
-- Coordinator loss, election and session recovery.
-- Duplicate, delayed and reordered protocol messages.
-- Interrupted file transfers and verified cache reuse.
-- Acoustic onset measurements rather than screen-position comparison alone.
-
-The replacement APK will be published after this verification is complete.
+Manual calibration applies a stable per-device delay. Physical evaluation can estimate acoustic onset error by recording all speakers together and cross-correlating a known transient from each channel.
