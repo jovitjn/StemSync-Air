@@ -8,6 +8,12 @@ The project combines my interests in music, wireless communication and digital s
 
 <img src="docs/screenshots/phone-home.png" width="320" alt="StemSync Air home screen on an Android phone">
 
+## Previous Android build
+
+[Download StemSync Air v0.2.1](distribution/StemSync-Air-v0.2.1-debug.apk)
+
+This earlier Android 10+ debug build and its [SHA-256 checksum](distribution/StemSync-Air-v0.2.1-debug.apk.sha256) are retained with the project history.
+
 ## Main features
 
 - Connects multiple nearby Android devices in one offline session.
@@ -97,6 +103,27 @@ Files are stored by their content digest rather than a sender-controlled filenam
 ### MP3, WAV and stems
 
 A single MP3 is decoded locally into PCM16 WAV before distribution. Deterministic PCM frame counts make content validation and synchronized seeking simpler. A single WAV can be used directly.
+
+The conversion pipeline is:
+
+1. The selected content URI is copied into a bounded temporary input file. A `RIFF` signature identifies WAV input; other single-file input enters the MP3 decoder.
+2. `MediaExtractor` finds the `audio/mpeg` track and supplies compressed MP3 access units with their presentation timestamps.
+3. Android's `MediaCodec` decoder converts those access units into PCM output buffers. The requested output encoding is signed 16-bit PCM.
+4. The first output-format event determines the real sample rate and channel count. The converter accepts mono or stereo at supported standard rates from 8 to 48 kHz and rejects mid-stream format changes.
+5. PCM buffers are appended sequentially after a reserved 44-byte header. Codec-configuration buffers are excluded, decoded size is bounded and partial output is deleted after failure.
+6. The converter calculates the PCM frame count and writes a little-endian RIFF/WAVE header from the actual decoded data:
+
+```text
+bytesPerSample = 2
+blockAlign     = channels × bytesPerSample
+frameCount     = pcmDataBytes / blockAlign
+byteRate       = sampleRate × blockAlign
+duration       = frameCount / sampleRate
+```
+
+7. The completed file passes the same WAV parser used for received content. SHA-256 is then calculated over the entire decoded WAV, so every participant receives and verifies the same PCM representation.
+
+The conversion is bounded to 100 MiB for both input and decoded output and has a three-minute wall-time limit. Decoder resources and temporary files are released on both success and failure.
 
 Up to six WAV files can represent aligned stems from one song. Stem files must have the same sample rate and exact PCM frame count. Equal rounded durations are insufficient because files that differ by one frame would no longer share the same sample timeline.
 

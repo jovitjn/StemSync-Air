@@ -81,7 +81,27 @@ Cached files are rehashed against the active manifest before reuse. Manifest rev
 
 ## Audio import
 
-The Storage Access Framework accepts content URIs from Android's system picker. A single MP3 is identified using `MediaExtractor` and decoded with `MediaCodec` into bounded PCM16 WAV. Partial output is deleted after failure.
+The Storage Access Framework accepts content URIs from Android's system picker. Input is copied into an app-private temporary file with a 100 MiB bound. A `RIFF` signature selects the WAV path; otherwise a single-file import enters the MP3 decoder.
+
+`MediaExtractor` locates the `audio/mpeg` track and advances through compressed access units. Each unit is queued into `MediaCodec` with the extractor's presentation timestamp. End of input is represented by `BUFFER_FLAG_END_OF_STREAM`, and output is drained until the corresponding output flag appears.
+
+The decoder is configured to request signed PCM16. Its output-format callback supplies the actual sample rate and channel count. Output must remain mono or stereo, use a supported standard rate from 8 to 48 kHz, remain PCM16 and remain constant for the complete song.
+
+The converter reserves 44 bytes, then appends decoded PCM buffers while excluding codec-configuration data. For channel count `C`, sample rate `Fs` and PCM byte count `B`:
+
+```text
+bytesPerSample = 2
+blockAlign = 2C
+frames = B / (2C)
+byteRate = 2C × Fs
+durationSeconds = frames / Fs
+```
+
+`B` must be positive and divisible by `2C`. After decoding, the converter writes the canonical little-endian RIFF header: `RIFF` size `B + 36`, PCM format code 1, channel count, sample rate, byte rate, block alignment, 16 bits per sample and `data` size `B`.
+
+The finished output is reopened by the WAV parser before import continues. The parser independently verifies container length, format code, channel count, sample rate, byte rate, block alignment, bit depth and frame divisibility. SHA-256 is calculated only after this validation and becomes the content identity distributed to the other devices.
+
+Both compressed input and decoded output are limited to 100 MiB. A three-minute monotonic deadline bounds a stalled decoder. Failure deletes partial output, stops and releases the codec, releases the extractor and removes temporary input.
 
 Single PCM16 WAV files can be imported directly. Multi-file stem import requires identical sample rates and exact PCM frame counts. Matching displayed duration alone is insufficient and cannot prove that the stems are musically aligned.
 
