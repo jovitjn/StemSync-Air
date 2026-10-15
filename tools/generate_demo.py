@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Original 32-second, 120 BPM instrumental: eight 4/4 bars, Am–F–C–G twice.
+"""Original 32-second, 120 BPM instrumental: sixteen 4/4 bars, Am–F–C–G four times.
 Deterministic synthesis. No sampled recordings. All stems are mono 44.1kHz PCM16.
 """
 from pathlib import Path

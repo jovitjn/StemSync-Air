@@ -18,6 +18,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.runtime.*
 import androidx.core.content.ContextCompat
+import androidx.core.content.edit
+import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.common.GoogleApiAvailability
 import com.google.android.gms.common.ConnectionResult
@@ -47,19 +49,19 @@ class MainActivity : ComponentActivity() {
                     val prefs=getPreferences(MODE_PRIVATE)
                     val previouslyDenied=required.any { prefs.getBoolean(it,false) && !shouldShowRequestPermissionRationale(it) }
                     if (previouslyDenied) vm.failure("Nearby permissions are off. Open App settings → Permissions to enable access.")
-                    else { required.forEach { prefs.edit().putBoolean(it,true).apply() }; requestedAction=action; permissionLauncher.launch(required.toTypedArray()) }
+                    else { prefs.edit { required.forEach { putBoolean(it,true) } }; requestedAction=action; permissionLauncher.launch(required.toTypedArray()) }
                 }
             }
             StemSyncApp(state,vm,
                 host={ access("host") },join={ access("join") },reconnect={ access("reconnect") },
                 import={ picker.launch(arrayOf("audio/wav","audio/x-wav","audio/wave")) },
                 export={ exporter.launch("stemsync-diagnostics.csv") },
-                settings={ startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:$packageName"))) },
+                settings={ startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,"package:$packageName".toUri())) },
                 radios={ startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) })
         }
     }
     private fun requiredPermissions(): List<String> = buildList {
-        if (Build.VERSION.SDK_INT<=32) add(Manifest.permission.ACCESS_FINE_LOCATION)
+        if (Build.VERSION.SDK_INT<=32) addAll(listOf(Manifest.permission.ACCESS_FINE_LOCATION,Manifest.permission.ACCESS_COARSE_LOCATION,Manifest.permission.READ_EXTERNAL_STORAGE))
         if (Build.VERSION.SDK_INT>=31) addAll(listOf(Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT,Manifest.permission.BLUETOOTH_ADVERTISE))
         if (Build.VERSION.SDK_INT>=33) add(Manifest.permission.NEARBY_WIFI_DEVICES)
     }

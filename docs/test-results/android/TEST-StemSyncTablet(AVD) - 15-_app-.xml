@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="air.stemsync.AppTest" tests="5" failures="0" errors="0" skipped="0" time="31.073" timestamp="2026-10-15T07:20:25" hostname="validation-host">
+  <properties>
+    <property name="device" value="StemSyncTablet(AVD) - 15" />
+    <property name="flavor" value="" />
+    <property name="project" value=":app" />
+  </properties>
+  <testcase name="homeAndActionsAccessible" classname="air.stemsync.AppTest" time="4.66" />
+  <testcase name="helpAndSettingsVisible" classname="air.stemsync.AppTest" time="6.309" />
+  <testcase name="connectionErrorsAreVisible" classname="air.stemsync.AppTest" time="3.501" />
+  <testcase name="everyDemoStemDecodesWithMedia3" classname="air.stemsync.AppTest" time="3.135" />
+  <testcase name="hostPlaybackPauseSeekAndStemSwitch" classname="air.stemsync.AppTest" time="12.534" />
+</testsuite>

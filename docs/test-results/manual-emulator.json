@@ -1,0 +1,9 @@
+{
+  "host_seek_position": "0:16",
+  "guest_seek_position": "0:16",
+  "guest_checked_stem": "Drums",
+  "position_preserved_after_stem_change": true,
+  "fresh_guest_files_sha256_verified": 5,
+  "physical_devices": false,
+  "internet_isolated": false
+}

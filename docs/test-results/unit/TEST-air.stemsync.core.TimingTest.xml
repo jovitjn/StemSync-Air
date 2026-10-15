@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuite name="air.stemsync.core.TimingTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-10-15T07:18:07.031Z" hostname="validation-host" time="0.006">
+  <properties />
+  <testcase name="positiveOffset" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="freshnessAndReset" classname="air.stemsync.core.TimingTest" time="0.002" />
+  <testcase name="reversedGuestTimeRejected" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="zeroOffset" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="negativeTimestampsRejected" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="activeOffsetSlewIsBounded" classname="air.stemsync.core.TimingTest" time="0.001" />
+  <testcase name="hostProcessingRemovedFromRtt" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="stoppedClockCanReestimate" classname="air.stemsync.core.TimingTest" time="0.001" />
+  <testcase name="rollingWindowBounded" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="impossibleRttRejected" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="reversedHostTimeRejected" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="hostConversion" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="jitterOutliersDoNotMoveBestEstimate" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="staleResponseRejected" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="asymmetryHasKnownBias" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <testcase name="populationStandardDeviation" classname="air.stemsync.core.TimingTest" time="0.001" />
+  <testcase name="negativeOffset" classname="air.stemsync.core.TimingTest" time="0.0" />
+  <system-out />
+  <system-err />
+</testsuite>

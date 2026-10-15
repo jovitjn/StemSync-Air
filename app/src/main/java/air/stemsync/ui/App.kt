@@ -59,10 +59,10 @@ private val Muted=Color(0xFFA8B7AD)
                                     OutlinedButton(onClick=reconnect) { Text(if(s.reconnects>0 || s.tracks.isNotEmpty()) "Reconnect" else "Search again") }
                                 }
                                 if(wide) Row(horizontalArrangement=Arrangement.spacedBy(40.dp)) {
-                                    Column(Modifier.weight(1f)) { Artwork(Modifier.fillMaxWidth().aspectRatio(1f)) }
+                                    Column(Modifier.weight(1f)) { Artwork(Modifier.fillMaxWidth().aspectRatio(1f),s.tracks.firstOrNull()?.songId=="afterglow-v1") }
                                     Column(Modifier.weight(1f),verticalArrangement=Arrangement.spacedBy(20.dp)) { PlayerPanel(s,vm); Room(s,vm,import) }
                                 } else {
-                                    Artwork(Modifier.fillMaxWidth().aspectRatio(1.25f))
+                                    Artwork(Modifier.fillMaxWidth().aspectRatio(1.25f),s.tracks.firstOrNull()?.songId=="afterglow-v1")
                                     PlayerPanel(s,vm); Room(s,vm,import)
                                 }
                             }
@@ -83,10 +83,10 @@ private val Muted=Color(0xFFA8B7AD)
         Text("Share a song with a nearby device. Play it together, or give each speaker its own instrument.",color=Muted)
         Button(onClick=host,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(14.dp)) { Text("Host Session",fontSize=17.sp) }
         OutlinedButton(onClick=join,modifier=Modifier.fillMaxWidth().heightIn(min=54.dp),shape=RoundedCornerShape(14.dp)) { Text("Join Session",fontSize=17.sp) }
-        Text("Nearby access connects your devices over local radios. On older Android versions, discovery also needs Location permission. Audio stays on your devices.",fontSize=12.sp,color=Muted)
+        Text("Nearby access connects your devices over local radios. On older Android versions, discovery also needs precise Location permission and received files need legacy storage access. Audio stays on your devices.",fontSize=12.sp,color=Muted)
     }
 }
-@Composable private fun Artwork(modifier: Modifier) {
+@Composable private fun Artwork(modifier: Modifier,original: Boolean=true) {
     Box(modifier.background(Color(0xFF253A30),RoundedCornerShape(22.dp))) {
         Canvas(Modifier.fillMaxSize().padding(24.dp)) {
             val center=Offset(size.width*.58f,size.height*.47f); val radius=min(size.width,size.height)*.36f
@@ -95,7 +95,7 @@ private val Muted=Color(0xFFA8B7AD)
             drawCircle(Ink,radius*.12f,center)
             for(i in 0..6) { val y=size.height*(.64f+i*.048f); drawLine(Color(0xFF253A30),Offset(0f,y),Offset(size.width,y-size.height*.16f),strokeWidth=5f) }
         }
-        Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) { Text("AFTERGLOW",fontSize=12.sp,letterSpacing=4.sp,fontWeight=FontWeight.Bold); Text("ON THE LAKE",fontSize=10.sp,letterSpacing=3.sp,color=Cream.copy(alpha=.7f)) }
+        Column(Modifier.align(Alignment.BottomStart).padding(24.dp)) { Text(if(original) "AFTERGLOW" else "YOUR MUSIC",fontSize=12.sp,letterSpacing=4.sp,fontWeight=FontWeight.Bold); Text(if(original) "ON THE LAKE" else "LOCAL SESSION",fontSize=10.sp,letterSpacing=3.sp,color=Cream.copy(alpha=.7f)) }
     }
 }
 @Composable private fun PlayerPanel(s: UiState,vm: SessionViewModel) {
@@ -122,7 +122,7 @@ private val Muted=Color(0xFFA8B7AD)
         HorizontalDivider(color=Muted.copy(alpha=.2f))
         Text("IN THE ROOM",fontSize=11.sp,letterSpacing=2.sp,color=Muted)
         Text("You · ${if(s.prepared) "audio prepared" else "preparing"}")
-        s.peers.forEach { Text("${it.name} · ${if(it.ready) "ready" else "connected / preparing"}",color=if(it.ready) Amber else Muted) }
+        s.peers.forEach { Text("${it.name} · ${if(s.role=="guest") "host connected" else if(it.ready) "ready" else "connected / preparing"}",color=if(it.ready) Amber else Muted) }
         if(s.peers.isEmpty() && s.role=="host") Text("On the other device: Join Session, select this room, then compare the verification code.",color=Muted)
         if(s.role=="host") FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=import,enabled=!s.busy) { Text("Import WAV files") }

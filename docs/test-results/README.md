@@ -1,0 +1,1 @@
+These are the successful final JUnit XML reports, build log and lint report. Hostname and absolute workspace prefixes were normalized for portability; test cases, counts, durations and outcomes are unchanged. Full emulator system logs are omitted. See ../VALIDATION.md for interpretation and limitations.

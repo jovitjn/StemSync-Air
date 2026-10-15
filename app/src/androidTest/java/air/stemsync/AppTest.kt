@@ -26,6 +26,47 @@ class AppTest {
         compose.onNodeWithText("Wireless settings").performScrollTo().assertHasClickAction()
         compose.onNodeWithText("App settings & permissions").performScrollTo().assertHasClickAction()
     }
+    @Test fun connectionErrorsAreVisible() {
+        compose.runOnUiThread {
+            androidx.lifecycle.ViewModelProvider(compose.activity)[SessionViewModel::class.java].failure("Connection lost. Reconnect when ready.")
+        }
+        compose.onNodeWithText("Connection lost. Reconnect when ready.").assertIsDisplayed()
+        compose.onNodeWithText("Dismiss").performClick()
+        compose.onNodeWithText("Connection lost. Reconnect when ready.").assertDoesNotExist()
+    }
+    @Test fun hostPlaybackPauseSeekAndStemSwitch() {
+        lateinit var vm: SessionViewModel
+        compose.runOnUiThread {
+            vm=androidx.lifecycle.ViewModelProvider(compose.activity)[SessionViewModel::class.java]
+            vm.hostSession()
+        }
+        compose.waitUntil(20000) { !vm.state.value.busy }
+        compose.runOnUiThread { vm.loadDemo() }
+        compose.waitUntil(20000) { vm.state.value.prepared && !vm.state.value.busy }
+        compose.runOnUiThread { vm.volume(0f); vm.playPause() }
+        compose.waitUntil(10000) { vm.state.value.playing && vm.state.value.position>500 }
+        compose.runOnUiThread { vm.playPause() }
+        compose.waitUntil(10000) { !vm.state.value.playing }
+        // Query the stable paused control after scrolling; a live 32-second song
+        // can end while an overloaded emulator waits for scroll animations.
+        compose.onNodeWithText("Play together").performScrollTo()
+        compose.onNodeWithText("Play together").assertHasClickAction()
+        compose.runOnUiThread { vm.seek(10000) }
+        compose.waitUntil(10000) { kotlin.math.abs(vm.state.value.position-10000)<100 }
+        compose.runOnUiThread { vm.select("afterglow-drums") }
+        compose.waitUntil(10000) { vm.state.value.prepared && vm.state.value.selected=="afterglow-drums" }
+        Assert.assertTrue(kotlin.math.abs(vm.state.value.position-10000)<150)
+        compose.runOnUiThread { vm.stop() }
+        compose.waitUntil(10000) { vm.state.value.position<100 }
+        compose.runOnUiThread { vm.seek(31000) }
+        compose.waitUntil(10000) { vm.state.value.position>=31000 && vm.state.value.prepared }
+        compose.runOnUiThread { vm.playPause() }
+        try { compose.waitUntil(10000) { vm.state.value.position>=32000 && !vm.state.value.playing } }
+        catch (failure: Throwable) { throw AssertionError("EOF state: ${vm.state.value}",failure) }
+        compose.runOnUiThread { vm.playPause() }
+        compose.waitUntil(10000) { vm.state.value.playing && vm.state.value.position<5000 }
+        compose.runOnUiThread { vm.stop() }
+    }
     @Test fun everyDemoStemDecodesWithMedia3() {
         val instrument=InstrumentationRegistry.getInstrumentation()
         val tracks=Library(instrument.targetContext).installDemo()

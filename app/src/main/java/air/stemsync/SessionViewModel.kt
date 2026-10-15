@@ -30,7 +30,8 @@ data class UiState(
 )
 
 class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTransport.Events {
-    val state = MutableStateFlow(UiState())
+    private val mutableState = MutableStateFlow(UiState())
+    val state: StateFlow<UiState> = mutableState.asStateFlow()
     private val library = Library(app)
     private val clock = ClockEstimator()
     private val timeline = TimelineStore()
@@ -41,11 +42,15 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private val selfId = UUID.randomUUID().toString()
     private var sequence = 0L
     private var revision = 0L
+    private var songRevision = 0L
+    private var manifestRevision = -1L
+    private var manifestSequence = -1L
     private var host: String? = null
     private var everConnected = false
     private var foreground = true
     private var lastReady: Boolean? = null
     private var lastApplied = -1L
+    private var endedRevision = -1L
     private var lastDrift = 0L
     private var localTracks = emptyList<Track>()
     private var manifest = emptyList<Track>()
@@ -70,7 +75,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         viewModelScope.launch { while (isActive) { tick(); delay(20) } }
         viewModelScope.launch { while (isActive) { delay(750); synchronize(); expireTransfers() } }
     }
-    private fun mutate(f: (UiState)->UiState) { state.update(f) }
+    private fun mutate(f: (UiState)->UiState) { mutableState.update(f) }
     private fun message(kind: Kind, tracks: List<Track> = emptyList(), contentId: String? = null, payloadId: Long? = null,
         snapshot: Timeline? = null, t1: Long? = null, t2: Long? = null, t3: Long? = null, ready: Boolean? = null,
         rev: Long? = null, detail: String? = null) = Message(sessionId=sessionId,senderId=selfId,messageId=UUID.randomUUID().toString(),sequenceNumber=++sequence,timestampNs=nowNs(),kind=kind,tracks=tracks,contentId=contentId,payloadId=payloadId,timeline=snapshot,t1=t1,t2=t2,t3=t3,ready=ready,revision=rev,detail=detail)
@@ -82,7 +87,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         viewModelScope.launch {
             runCatching { network.advertise("StemSync · ${android.os.Build.MODEL.take(35)}") }
                 .onSuccess { mutate { it.copy(status="Room open · invite a nearby device",busy=false) }; loadDemo() }
-                .onFailure { failure("Could not open room: ${it.message}"); mutate { it.copy(busy=false) } }
+                .onFailure { failure("Could not open room: ${it.message}"); mutate { it.copy(busy=false,status="Room could not open. Check permissions and radios, then host again.") } }
         }
     }
     fun joinSession() {
@@ -90,7 +95,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     }
     fun reconnect() {
         if (state.value.role != "guest") return
-        host?.let { network.disconnect(it) }; host=null; clock.clear(); pendingSync.clear(); lastReady=null; player.player.pause()
+        host?.let { network.disconnect(it) }; host=null; clock.clear(); pendingSync.clear(); lastReady=null; lastApplied=-1; drift.reset(); player.player.pause()
         mutate { it.copy(peers=emptyList(),hosts=emptyMap(),status="Searching again · confirm the new code") }; search()
     }
     private fun search() {
@@ -123,13 +128,13 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         everConnected=true
         if (state.value.role=="host") {
             send(id,message(Kind.HELLO)); if (manifest.isNotEmpty()) sendManifest(id)
-        } else { host=id; network.stopDiscovery(); searchJob?.cancel(); clock.clear(); pendingSync.clear(); lastReady=null }
+        } else { host=id; lastApplied=-1; drift.reset(); network.stopDiscovery(); searchJob?.cancel(); clock.clear(); pendingSync.clear(); lastReady=null }
     }
     override fun disconnected(id: String) {
         mutate { it.copy(peers=it.peers.filterNot { p->p.id==id },auth=null,status=if (it.role=="host") "Guest disconnected · room remains open" else "Connection lost. Tap Reconnect to recover.") }
         incoming.filterValues { it.first==id }.keys.toList().forEach { failTransfer(it,"Connection interrupted") }
         outgoing.filterValues { it.first==id }.keys.toList().forEach { failTransfer(it,"Connection interrupted") }
-        if (host==id) { host=null; player.player.pause(); clock.clear(); pendingSync.clear(); lastReady=null; mutate { it.copy(syncReady=false) } }
+        if (host==id) { host=null; lastApplied=-1; drift.reset(); player.player.pause(); clock.clear(); pendingSync.clear(); lastReady=null; mutate { it.copy(syncReady=false) } }
     }
     override fun failure(message: String) { mutate { it.copy(error=message.take(220)) } }
     fun clearError() { mutate { it.copy(error=null) } }
@@ -137,7 +142,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private fun reset() {
         generation++; searchJob?.cancel(); libraryJob?.cancel(); network.stop(); player.player.pause(); player.player.clearMediaItems()
         payloads.keys.toList().forEach { cleanup(it) }; incoming.clear(); outgoing.clear(); started.clear(); verifying.clear()
-        host=null; sessionId=""; timeline.clear(); clock.clear(); drift.reset(); pendingSync.clear(); dedup.clear(); lastReady=null; lastApplied=-1; revision=0; manifest=emptyList(); everConnected=false
+        host=null; sessionId=""; timeline.clear(); clock.clear(); drift.reset(); pendingSync.clear(); dedup.clear(); lastReady=null; lastApplied=-1; endedRevision=-1; revision=0; songRevision=0; manifestRevision=-1; manifestSequence=-1; manifest=emptyList(); everConnected=false
         mutate { UiState(volume=it.volume,calibrationMs=it.calibrationMs) }
     }
     fun loadDemo() {
@@ -168,7 +173,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         }
     }
     private fun setSong(tracks: List<Track>) {
-        player.player.pause(); manifest=tracks; localTracks=(localTracks.filterNot { old->tracks.any { it.id==old.id } }+tracks)
+        player.player.pause(); songRevision++; manifest=tracks; localTracks=(localTracks.filterNot { old->tracks.any { it.id==old.id } }+tracks)
         mutate { it.copy(tracks=tracks,peers=it.peers.map { p->p.copy(ready=false) },duration=tracks.first().durationMs) }
         refreshCache(); select(tracks.first().id)
         command(false,0)
@@ -176,7 +181,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     }
     private fun refreshCache() { mutate { it.copy(cachedIds=localTracks.map { t->t.id }.toSet()) } }
     private fun sendManifest(id: String) {
-        send(id,message(Kind.MANIFEST,tracks=manifest)); timeline.latest?.let { send(id,message(Kind.TIMELINE,snapshot=it)) }
+        send(id,message(Kind.MANIFEST,tracks=manifest,rev=songRevision)); timeline.latest?.let { send(id,message(Kind.TIMELINE,snapshot=it)) }
     }
     fun select(id: String) {
         val track=manifest.firstOrNull { it.id==id } ?: return
@@ -190,8 +195,10 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     fun calibrate(value: Float) { mutate { it.copy(calibrationMs=value) }; lastApplied=-1; drift.reset() }
     fun playPause() {
         val latest=timeline.latest
-        val position=if (latest?.playing==true) latest.positionAt(nowNs()+1_000_000_000) else if (state.value.position>=state.value.duration) 0 else state.value.position
-        command(latest?.playing!=true,position)
+        val ended=state.value.position>=state.value.duration || latest?.let { it.playing && it.positionAt(hostNow())>=it.durationMs }==true
+        val resume=latest?.playing!=true || ended
+        val position=if (ended) 0 else if (!resume && latest!=null) latest.positionAt(nowNs()+1_000_000_000) else state.value.position
+        command(resume,position)
     }
     fun seek(position: Long) = command(timeline.latest?.playing==true, position)
     fun stop() = command(false,0)
@@ -211,7 +218,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private fun updatePrepared() {
         val ready=foreground && player.ready && state.value.selected in state.value.cachedIds && manifest.isNotEmpty() && manifest.all { it.id in state.value.cachedIds } && (state.value.role=="host" || clock.fresh(nowNs()))
         mutate { it.copy(prepared=player.ready,syncReady=if (it.role=="host") true else clock.fresh(nowNs())) }
-        if (host!=null && lastReady!=ready) { send(host!!,message(Kind.READY,ready=ready,contentId=manifest.firstOrNull()?.songId)); lastReady=ready }
+        if (host!=null && sessionId.isNotBlank() && lastReady!=ready) { send(host!!,message(Kind.READY,ready=ready,contentId=manifest.firstOrNull()?.songId,rev=manifestRevision)); lastReady=ready }
     }
     private fun synchronize() {
         val id=host ?: return
@@ -224,7 +231,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
             val m=Protocol.decode(bytes)
             require(state.value.peers.any { it.id==id })
             if (m.kind==Kind.HELLO && state.value.role=="guest" && id==host) {
-                if (sessionId!=m.sessionId) { timeline.clear(); lastApplied=-1; sessionId=m.sessionId }
+                if (sessionId!=m.sessionId) { timeline.clear(); lastApplied=-1; manifestRevision=-1; manifestSequence=-1; sessionId=m.sessionId }
                 require(sessionId.isNotBlank()); return@runCatching
             }
             require(m.sessionId==sessionId && sessionId.isNotBlank()) { "Session mismatch" }
@@ -242,8 +249,10 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
                 val pair=outgoing.entries.firstOrNull { it.value.first==id && it.value.second.id==m.contentId }
                 pair?.let { transfer(it.key,it.value.second,TransferPhase.READY,it.value.second.size); cleanup(it.key) }
             }
-            Kind.FILE_FAILED -> failure("Guest could not verify ${m.contentId}. Use Send / retry music.")
-            Kind.READY -> if (m.contentId==manifest.firstOrNull()?.songId) mutate { it.copy(peers=it.peers.map { p->if (p.id==id) p.copy(ready=m.ready==true) else p }) }
+            Kind.FILE_FAILED -> {
+                outgoing.filterValues { it.first==id && it.second.id==m.contentId }.keys.toList().forEach { failTransfer(it,"Guest could not verify ${m.contentId}. Use Send / retry music.") }
+            }
+            Kind.READY -> if (m.contentId==manifest.firstOrNull()?.songId && m.revision==songRevision) mutate { it.copy(peers=it.peers.map { p->if (p.id==id) p.copy(ready=m.ready==true) else p }) }
             Kind.ACK -> mutate { it.copy(peers=it.peers.map { p->if (p.id==id) p.copy(acknowledged=maxOf(p.acknowledged,m.revision ?: -1)) else p }) }
             Kind.LEAVE -> { network.disconnect(id); disconnected(id) }
             else -> require(m.kind==Kind.ERROR) { "Guest cannot control host playback" }
@@ -252,9 +261,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private fun guestMessage(id: String, m: Message, received: Long) {
         when (m.kind) {
             Kind.MANIFEST -> {
+                if (m.sequenceNumber<=manifestSequence) return
+                require(m.revision!=null && m.revision>=0)
                 require(m.tracks.isNotEmpty() && m.tracks.map { it.id }.distinct().size==m.tracks.size)
                 require(m.tracks.map { Triple(it.songId,it.durationMs,it.sampleRate) }.distinct().size==1)
-                manifest=m.tracks
+                manifest=m.tracks; manifestRevision=m.revision; manifestSequence=m.sequenceNumber; lastReady=null
                 val gen=generation
                 viewModelScope.launch {
                     localTracks=withContext(Dispatchers.IO) { library.tracks() }
@@ -349,7 +360,13 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         network.cancel(pid); (incoming[pid]?.second ?: outgoing[pid]?.second)?.let { transfer(pid,it,TransferPhase.FAILED,0) }
         cleanup(pid); failure(reason)
     }
-    private fun cleanup(pid: Long) { payloads.remove(pid)?.close(); incoming.remove(pid); outgoing.remove(pid); started.remove(pid); verifying.remove(pid); gate.remove(pid) }
+    private fun cleanup(pid: Long) {
+        val p=payloads.remove(pid)
+        if (pid in incoming && pid !in verifying) p?.asFile()?.asUri()?.let { uri ->
+            viewModelScope.launch(Dispatchers.IO) { runCatching { getApplication<Application>().contentResolver.delete(uri,null,null) } }
+        }
+        p?.close(); incoming.remove(pid); outgoing.remove(pid); started.remove(pid); verifying.remove(pid); gate.remove(pid)
+    }
     private fun expireTransfers() { started.filter { nowNs()-it.value>120_000_000_000L && it.key !in verifying }.keys.toList().forEach { failTransfer(it,"Transfer timed out. Retry music.") } }
     fun foreground(active: Boolean) {
         foreground=active
@@ -358,14 +375,17 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         updatePrepared()
     }
     private fun tick() {
-        val local=nowNs(); val hostTime=hostNow()-state.value.calibrationMs.toLong()*1_000_000; val current=timeline.at(hostTime)
-        val valid=foreground && player.ready && current?.trackId==manifest.firstOrNull()?.songId && (state.value.role=="host" || host!=null && clock.fresh(local))
+        val local=nowNs(); val hostTime=hostNow()-state.value.calibrationMs.toLong()*1_000_000
+        val clockUsable=state.value.role=="host" || host!=null && clock.fresh(local)
+        val current=if(clockUsable) timeline.at(hostTime) else timeline.current
+        val valid=foreground && player.ready && clockUsable && current!=null && hostTime>=current.effectiveHostTimeNs && current.trackId==manifest.firstOrNull()?.songId
         if (current!=null && valid) {
             val target=current.positionAt(hostTime)
             if (lastApplied!=current.playbackRevision) {
                 player.player.setPlaybackSpeed(1f); player.player.seekTo(target)
                 player.player.playWhenReady=current.playing && target<current.durationMs
                 lastApplied=current.playbackRevision; drift.reset(); lastDrift=local
+                mutate { it.copy(status=if(current.playing) "Playing on the shared timeline" else "Paused · ready for the next note") }
             }
             if (current.playing && local-lastDrift>=500_000_000L && player.player.isPlaying) {
                 lastDrift=local
@@ -375,12 +395,19 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
                 player.player.setPlaybackSpeed(correction.speed)
                 mutate { it.copy(timelineError=error) }
             }
-            if (current.positionAt(hostTime)>=current.durationMs) player.player.pause()
+            if (current.playing && current.positionAt(hostTime)>=current.durationMs && endedRevision!=current.playbackRevision) {
+                endedRevision=current.playbackRevision
+                player.player.pause(); player.player.seekTo(current.durationMs); player.player.setPlaybackSpeed(1f)
+                mutate { it.copy(status="Song finished · play it again") }
+            }
         } else if (player.player.isPlaying && state.value.role=="guest") { player.player.pause(); lastApplied=-1 }
         // UI and diagnostics updates at 5 Hz; scheduling checks at 50 Hz.
         if (local / 200_000_000 != lastUi / 200_000_000) {
             lastUi=local
-            mutate { it.copy(playing=player.player.isPlaying,position=player.player.currentPosition.coerceAtLeast(0),rtt=clock.rttMs,jitter=clock.jitterMs,
+            // Media3 may clamp an EOF seek to the final decodable sample.
+            // Display the authoritative completed duration instead of a stuck 0:31.
+            val displayPosition=if (current?.playing==true && endedRevision==current.playbackRevision && current.positionAt(hostTime)>=current.durationMs) current.durationMs else player.player.currentPosition.coerceAtLeast(0)
+            mutate { it.copy(playing=player.player.isPlaying,position=displayPosition,rtt=clock.rttMs,jitter=clock.jitterMs,
                 offset=clock.lastSampleNs?.let { clock.offsetNs/1e6 },syncAge=clock.lastSampleNs?.let { (local-it)/1e9 }) }
             updatePrepared()
         }
