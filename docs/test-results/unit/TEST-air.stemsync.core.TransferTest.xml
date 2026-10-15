@@ -1,24 +1,24 @@
-<testsuite name="air.stemsync.core.TransferTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.278Z" hostname="validation-host" time="0.193">
+<testsuite name="air.stemsync.core.TransferTest" tests="19" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:41:35.668Z" hostname="validation-host" time="0.251">
   <properties />
-  <testcase name="protocolRoundTrip" classname="air.stemsync.core.TransferTest" time="0.015" />
-  <testcase name="metadataFirst" classname="air.stemsync.core.TransferTest" time="0.0" />
-  <testcase name="traversalRejected" classname="air.stemsync.core.TransferTest" time="0.001" />
+  <testcase name="protocolRoundTrip" classname="air.stemsync.core.TransferTest" time="0.022" />
+  <testcase name="metadataFirst" classname="air.stemsync.core.TransferTest" time="0.002" />
+  <testcase name="traversalRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="payloadFirst" classname="air.stemsync.core.TransferTest" time="0.0" />
-  <testcase name="allDemoFilesMatchManifestAndWav" classname="air.stemsync.core.TransferTest" time="0.166" />
-  <testcase name="unsupportedVersionRejected" classname="air.stemsync.core.TransferTest" time="0.001" />
-  <testcase name="conflictingDuplicateRejected" classname="air.stemsync.core.TransferTest" time="0.001" />
-  <testcase name="incompleteNeverReady" classname="air.stemsync.core.TransferTest" time="0.0" />
+  <testcase name="allDemoFilesMatchManifestAndWav" classname="air.stemsync.core.TransferTest" time="0.217" />
+  <testcase name="unsupportedVersionRejected" classname="air.stemsync.core.TransferTest" time="0.002" />
+  <testcase name="conflictingDuplicateRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
+  <testcase name="incompleteNeverReady" classname="air.stemsync.core.TransferTest" time="0.001" />
   <testcase name="oversizeRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
-  <testcase name="matchingAndIncorrectChecksum" classname="air.stemsync.core.TransferTest" time="0.004" />
-  <testcase name="wrongChecksumShapeRejected" classname="air.stemsync.core.TransferTest" time="0.001" />
+  <testcase name="matchingAndIncorrectChecksum" classname="air.stemsync.core.TransferTest" time="0.003" />
+  <testcase name="wrongChecksumShapeRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="missingMetadataNeverReady" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="standardSha256Vector" classname="air.stemsync.core.TransferTest" time="0.0" />
-  <testcase name="actualStreamLimitEnforced" classname="air.stemsync.core.TransferTest" time="0.001" />
+  <testcase name="actualStreamLimitEnforced" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="oversizedControlRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="completionFirst" classname="air.stemsync.core.TransferTest" time="0.001" />
   <testcase name="cancelRemovesGate" classname="air.stemsync.core.TransferTest" time="0.0" />
   <testcase name="unsupportedRejected" classname="air.stemsync.core.TransferTest" time="0.0" />
-  <testcase name="duplicateNotClaimedTwice" classname="air.stemsync.core.TransferTest" time="0.0" />
+  <testcase name="duplicateNotClaimedTwice" classname="air.stemsync.core.TransferTest" time="0.001" />
   <system-out />
   <system-err />
 </testsuite>

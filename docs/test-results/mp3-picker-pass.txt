@@ -1,0 +1,1 @@
+PASS: selected StemSync-import-test.mp3 from Downloads through Import song / stems; song prepared and Play changed to Pause. Phone emulator, APK 0.2.1.

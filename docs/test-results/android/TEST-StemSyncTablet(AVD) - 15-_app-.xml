@@ -1,13 +1,15 @@
-<testsuite name="air.stemsync.AppTest" tests="6" failures="0" errors="0" skipped="0" time="92.754" timestamp="2026-10-15T12:27:10" hostname="validation-host">
+<testsuite name="air.stemsync.AppTest" tests="8" failures="0" errors="0" skipped="0" time="71.996" timestamp="2026-10-15T19:43:18" hostname="validation-host">
   <properties>
     <property name="device" value="StemSyncTablet(AVD) - 15" />
     <property name="flavor" value="" />
     <property name="project" value=":app" />
   </properties>
-  <testcase name="recreationPreservesPlaybackButTrueBackgroundPauses" classname="air.stemsync.AppTest" time="37.736" />
-  <testcase name="homeAndActionsAccessible" classname="air.stemsync.AppTest" time="14.2" />
-  <testcase name="helpAndSettingsVisible" classname="air.stemsync.AppTest" time="13.75" />
-  <testcase name="connectionErrorsAreVisible" classname="air.stemsync.AppTest" time="4.481" />
-  <testcase name="everyDemoStemDecodesWithMedia3" classname="air.stemsync.AppTest" time="3.832" />
-  <testcase name="hostPlaybackPauseSeekAndStemSwitch" classname="air.stemsync.AppTest" time="15.963" />
+  <testcase name="recreationPreservesPlaybackButTrueBackgroundPauses" classname="air.stemsync.AppTest" time="17.009" />
+  <testcase name="homeAndActionsAccessible" classname="air.stemsync.AppTest" time="7.91" />
+  <testcase name="helpAndSettingsVisible" classname="air.stemsync.AppTest" time="6.73" />
+  <testcase name="connectionErrorsAreVisible" classname="air.stemsync.AppTest" time="6.383" />
+  <testcase name="stereoVariableBitrateMp3DecodesAndMalformedInputIsRejected" classname="air.stemsync.AppTest" time="5.354" />
+  <testcase name="everyDemoStemDecodesWithMedia3" classname="air.stemsync.AppTest" time="5.409" />
+  <testcase name="hostPlaybackPauseSeekAndStemSwitch" classname="air.stemsync.AppTest" time="15.532" />
+  <testcase name="mp3ContentUriImportsAndPlaysAsVerifiedSharedAudio" classname="air.stemsync.AppTest" time="4.331" />
 </testsuite>

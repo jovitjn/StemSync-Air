@@ -163,14 +163,14 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
             mutate { it.copy(busy=true) }
             runCatching { withContext(Dispatchers.IO) {
                 require(uris.size <= 6) { "Select at most six aligned PCM WAV files" }
-                val tracks=uris.map { library.import(it) }
+                val tracks=uris.map { library.import(it, allowMp3=uris.size==1) }
                 if (tracks.size==1) tracks else {
                     Wav.requireAligned(tracks.map { Wav.inspect(library.file(it)) })
                     require(tracks.map { it.id }.distinct().size == tracks.size) { "Choose different stem files" }
                     val song=tracks.first().songId
                     tracks.mapIndexed { index,t -> t.copy(songId=song,stem="Stem ${index+1}").also { library.remember(it) } }
                 }
-            } }.onSuccess { setSong(it) }.onFailure { failure("Import failed: ${it.message}. Use 16-bit PCM WAV.") }
+            } }.onSuccess { setSong(it) }.onFailure { failure("Import failed: ${it.message}") }
             mutate { it.copy(busy=false) }
         }
     }

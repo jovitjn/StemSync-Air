@@ -27,15 +27,21 @@ class Library(private val context: Context) {
         }
         return tracks
     }
-    fun import(uri: Uri): Track {
-        val temp = File.createTempFile("import", ".wav", root)
+    fun import(uri: Uri, allowMp3: Boolean = true): Track {
+        val temp = File.createTempFile("import", ".input", root)
+        var decoded: File? = null
         try {
             context.contentResolver.openInputStream(uri)!!.use { input -> temp.outputStream().use { Files.copyBounded(input, it, MAX_FILE_BYTES) } }
-            val wav = Wav.inspect(temp); val hash = Files.sha256(temp)
+            val isWav = temp.inputStream().use { input -> val tag=ByteArray(4); input.read(tag)==4 && String(tag, Charsets.US_ASCII)=="RIFF" }
+            val audio = if (isWav) temp else {
+                require(allowMp3) { "Choose one MP3 song at a time, or aligned WAV files for stems" }
+                File.createTempFile("decoded", ".wav", root).also { decoded=it; Mp3Import.decode(temp,it) }
+            }
+            val wav = Wav.inspect(audio); val hash = Files.sha256(audio)
             val display = context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null } ?: "My track"
-            val track = Track(hash.take(24), hash.take(24), "Full mix", display.take(100), "import-${hash.take(16)}.wav", temp.length(), hash, wav.durationMs, wav.sampleRate)
-            track.validate(); check(temp.renameTo(file(track))); remember(track); return track
-        } finally { temp.delete() }
+            val track = Track(hash.take(24), hash.take(24), "Full mix", display.take(100), "import-${hash.take(16)}.wav", audio.length(), hash, wav.durationMs, wav.sampleRate)
+            track.validate(); check(audio.renameTo(file(track))); remember(track); return track
+        } finally { temp.delete(); decoded?.delete() }
     }
     fun receive(uri: Uri, track: Track): File {
         track.validate()

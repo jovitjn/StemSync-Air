@@ -125,7 +125,7 @@ private val Muted=Color(0xFFA8B7AD)
         s.peers.forEach { Text("${it.name} · ${if(s.role=="guest") "host connected" else if(it.ready) "ready" else "connected / preparing"}",color=if(it.ready) Amber else Muted) }
         if(s.peers.isEmpty() && s.role=="host") Text("On the other device: Join Session, select this room, then compare the verification code.",color=Muted)
         if(s.role=="host") FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick=import,enabled=!s.busy) { Text("Import WAV files") }
+            OutlinedButton(onClick=import,enabled=!s.busy) { Text("Import song / stems") }
             TextButton(onClick=vm::loadDemo,enabled=!s.busy) { Text("Original demo") }
         }
         if(s.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -156,8 +156,8 @@ private val Muted=Color(0xFFA8B7AD)
         Text("${s.calibrationMs.roundToInt()} ms · positive delays this device",color=Amber)
         Slider(value=s.calibrationMs,onValueChange=vm::calibrate,valueRange=-300f..300f,steps=119)
         Text("If this speaker sounds early, add delay in small steps. Use the same drum stem on both devices, listen halfway between them, and adjust until the double hit is reduced. This is a listening adjustment, not a measurement.",color=Muted)
-        Text("Imports: up to six aligned, 16-bit PCM WAV files, 100 MiB each. Multiple files must share exact PCM frame count and sample rate and are treated as stems. Alignment remains your responsibility.",color=Muted)
-        Text("StemSync Air 0.2 · one host + one guest\nOriginal demo: Afterglow on the lake\nOffline file distribution followed by local playback. Google Play services required. Acoustic synchronization varies by device. Background playback is not supported.",fontSize=12.sp,color=Muted)
+        Text("Imports: select one MP3 song, one WAV song, or up to six aligned 16-bit PCM WAV stems. MP3 is converted locally for sharing; decoded audio is limited to 100 MiB. Multiple files must share exact PCM frame count and sample rate and are treated as stems. Alignment remains your responsibility.",color=Muted)
+        Text("StemSync Air 0.2.1 · one host + one guest\nOriginal demo: Afterglow on the lake\nOffline file distribution followed by local playback. Google Play services required. Acoustic synchronization varies by device. Background playback is not supported.",fontSize=12.sp,color=Muted)
     }
 }
 private fun time(ms: Long)="%d:%02d".format(ms/60000,(ms/1000)%60)

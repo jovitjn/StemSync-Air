@@ -1,9 +1,9 @@
-<testsuite name="air.stemsync.core.AudioAlignmentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:12.971Z" hostname="validation-host" time="0.031">
+<testsuite name="air.stemsync.core.AudioAlignmentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:41:35.111Z" hostname="validation-host" time="0.12">
   <properties />
-  <testcase name="oneFrameDifferenceIsRejectedEvenWhenMillisecondsMatch" classname="air.stemsync.core.AudioAlignmentTest" time="0.029" />
-  <testcase name="contentValidationRejectsRenamedNonWav" classname="air.stemsync.core.AudioAlignmentTest" time="0.002" />
+  <testcase name="oneFrameDifferenceIsRejectedEvenWhenMillisecondsMatch" classname="air.stemsync.core.AudioAlignmentTest" time="0.114" />
+  <testcase name="contentValidationRejectsRenamedNonWav" classname="air.stemsync.core.AudioAlignmentTest" time="0.004" />
   <testcase name="exactFrameCountsAndRatesAreAccepted" classname="air.stemsync.core.AudioAlignmentTest" time="0.0" />
-  <testcase name="equalDurationDifferentRatesAreRejected" classname="air.stemsync.core.AudioAlignmentTest" time="0.0" />
+  <testcase name="equalDurationDifferentRatesAreRejected" classname="air.stemsync.core.AudioAlignmentTest" time="0.001" />
   <system-out />
   <system-err />
 </testsuite>

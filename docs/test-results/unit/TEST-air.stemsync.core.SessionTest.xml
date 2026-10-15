@@ -1,15 +1,15 @@
-<testsuite name="air.stemsync.core.SessionTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.244Z" hostname="validation-host" time="0.004">
+<testsuite name="air.stemsync.core.SessionTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-15T19:41:35.632Z" hostname="validation-host" time="0.005">
   <properties />
-  <testcase name="successWithoutUserConsentRejected" classname="air.stemsync.core.SessionTest" time="0.0" />
+  <testcase name="successWithoutUserConsentRejected" classname="air.stemsync.core.SessionTest" time="0.001" />
   <testcase name="authenticatedGuestCanExchange" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="hostDepartureClearsAllConnections" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="allPreparedAllowsStart" classname="air.stemsync.core.SessionTest" time="0.001" />
   <testcase name="newHostHasNoImplicitGuests" classname="air.stemsync.core.SessionTest" time="0.0" />
-  <testcase name="guestsCannotPublishTimelineOrManifest" classname="air.stemsync.core.SessionTest" time="0.001" />
+  <testcase name="guestsCannotPublishTimelineOrManifest" classname="air.stemsync.core.SessionTest" time="0.002" />
   <testcase name="unpreparedParticipantBlocksStart" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="guestDisconnectRevokesConsent" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="remoteRejectionPreventsExchange" classname="air.stemsync.core.SessionTest" time="0.0" />
-  <testcase name="unpreparedHostBlocksStart" classname="air.stemsync.core.SessionTest" time="0.001" />
+  <testcase name="unpreparedHostBlocksStart" classname="air.stemsync.core.SessionTest" time="0.0" />
   <system-out />
   <system-err />
 </testsuite>

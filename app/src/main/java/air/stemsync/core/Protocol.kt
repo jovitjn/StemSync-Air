@@ -6,6 +6,7 @@ import kotlinx.serialization.json.Json
 import java.io.*
 import java.security.MessageDigest
 
+val SUPPORTED_PCM_RATES = listOf(8000, 11025, 12000, 16000, 22050, 24000, 32000, 44100, 48000)
 const val MAX_FILE_BYTES = 100L * 1024 * 1024
 @Serializable
 data class Track(val id: String, val songId: String, val stem: String, val title: String,
@@ -16,7 +17,7 @@ data class Track(val id: String, val songId: String, val stem: String, val title
         require(stem.length in 1..40 && title.length in 1..100)
         require(filename.matches(Regex("[a-zA-Z0-9_-]{1,100}\\.wav"))) { "Unsafe filename" }
         require(size in 45..MAX_FILE_BYTES && durationMs in 1..3_600_000)
-        require(format == "audio/wav" && sampleRate in listOf(22050, 24000, 44100, 48000))
+        require(format == "audio/wav" && sampleRate in SUPPORTED_PCM_RATES)
         require(sha256.matches(Regex("[a-f0-9]{64}")))
     }
 }
@@ -89,7 +90,7 @@ object Wav {
             require(start + size <= f.length())
             when (id) {
                 "fmt " -> { require(size >= 16); require(u16() == 1); channels = u16(); rate = u32().toInt(); val byteRate = u32(); val align = u16(); val bits = u16()
-                    require(channels in 1..2 && rate in listOf(22050,24000,44100,48000) && bits == 16 && align == channels * 2 && byteRate == rate.toLong()*align); formatSeen = true }
+                    require(channels in 1..2 && rate in SUPPORTED_PCM_RATES && bits == 16 && align == channels * 2 && byteRate == rate.toLong()*align); formatSeen = true }
                 "data" -> { require(dataBytes == 0L); dataBytes = size }
             }
             f.seek(start + size + (size % 2))

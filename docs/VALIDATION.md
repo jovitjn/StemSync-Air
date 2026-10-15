@@ -4,7 +4,7 @@ This is a build-verified Android MVP, with functional tests on Android virtual d
 
 ## Environment and reproducibility
 
-Validation date: 2026-10-15. Current build: 0.2.0 (version code 2). macOS host, isolated Amazon Corretto JDK 17, Gradle 8.13, Android SDK 36 / Build Tools 35.0.0, AGP 8.13.2, Kotlin 2.3.20. App minimum API 29, target API 36. The two Google APIs Android 15 / API 35 arm64 emulators use a Pixel 7 phone profile (1080×2400) and Pixel Tablet landscape profile (2560×1600). They are not Samsung hardware. Emulator audio output was disabled; decoder and player-state validation is not a listening test.
+Validation date: 2026-10-15. Current build: 0.2.1 (version code 3). macOS host, isolated Amazon Corretto JDK 17, Gradle 8.13, Android SDK 36 / Build Tools 35.0.0, AGP 8.13.2, Kotlin 2.3.20. App minimum API 29, target API 36. The two Google APIs Android 15 / API 35 arm64 emulators use a Pixel 7 phone profile (1080×2400) and Pixel Tablet landscape profile (2560×1600). They are not Samsung hardware. Emulator audio output was disabled; decoder and player-state validation is not a listening test.
 
 From the project directory with JDK 17 and the SDK configured:
 
@@ -17,16 +17,20 @@ A running device is required for the connected tests. The wrapper pins the offic
 
 ## Automated checks
 
-Version 0.2.0 final combined build, unit, lint and connected regression: **BUILD SUCCESSFUL**. All six instrumentation tests passed on each emulator (12 executions), with zero failures and zero skips. See [curated reports](test-results/README.md).
+Version 0.2.1 final clean combined build, unit, lint and connected regression: **BUILD SUCCESSFUL**. All eight instrumentation tests passed on each emulator (16 executions), with zero failures and zero skips. See [curated reports](test-results/README.md).
 
 The regression caught two test timing issues: holding a transient Pause node through a slow scroll, and requesting Play before a seek had finished preparing. The test now re-queries a stable paused control and waits for decoder readiness, while retaining playback/position assertions. The app also explicitly displays the authoritative duration at end of song; restarting then schedules position zero.
 
 - 84 pure Kotlin tests: clock estimator/quality 25; timeline 13; drift controller 5; transfer/protocol/WAV validation 19; session consent/readiness 10; manifest scopes/current-file cache 8; exact PCM alignment/content validation 4. All passed with no skips.
 - Android instrumentation covers home actions, help/settings, visible connection errors, real Media3 decoding of all five 32-second WAV files, host playback/pause/seek/stem selection/stop/end/restart, and Activity recreation versus genuine backgrounding.
 - Audio verification checks all five hashes, equal sample rates/channels/durations, exact integer full-mix equality to the aligned stems, and no clipping. Passed.
-- Lint: zero errors; 12 warnings. Eleven report available dependency/tool versions. One asks for legacy backup configuration despite the explicit `fullBackupContent="false"` and `allowBackup="false"`; Android 12+ extraction rules also exclude application data. Warnings are retained transparently.
+- Lint: zero errors; 11 dependency/tool-version warnings, retained transparently.
 
 The clock and timeline tests use synthetic inputs with independently specified expected results; they are not measured radio data. The Android playback test exercises the real player locally, while its direct ViewModel host setup does not prove permission granting or Nearby success. Those are separate manual checks.
+
+## MP3 import regression (0.2.1)
+
+New device tests import an original mono 44.1 kHz MP3 from an Android Downloads content URI, verify the decoded WAV hash and metadata, pass its bytes through receiver validation, and play the result with Media3. A stereo 32 kHz variable-bitrate MP3 is also decoded and checked. Invalid audio is rejected and incomplete output deleted. Both tests passed on both emulators. The phone emulator also passed a manual UI test: Import song / stems → Downloads → MP3 selection, followed by Play; the app showed the selected filename, prepared audio and advancing playback at 0:02. Multiple MP3 stem selection is explicitly rejected; exact-alignment stem import remains WAV-based. These tests do not establish physical acoustic synchronization.
 
 ## Five correctness fixes in version 0.2
 
@@ -46,7 +50,7 @@ The actual Nearby SDK was used, with no replacement transport. On a fresh guest 
 
 The version 0.1 APK check demonstrated discovery, matching authentication codes, real transfer, successful checksum verification and guest preparation. The host seek to 0:16 reached the same displayed position on the guest. Selecting Drums on the guest set its checked accessibility state and preserved 0:16; this corrects the earlier helper's insufficient selection assertion. Earlier emulator checks also demonstrated scheduled Play and Pause.
 
-Manual virtual-device reconnect/cache recovery, system file-picker import and diagnostics export remain pending. They are implemented and covered in part by component tests, but are not reported as end-to-end passes. Internet was not isolated in this virtual environment, so these observations are **not** an offline Samsung acceptance result.
+Manual virtual-device reconnect/cache recovery, host-only imported-song transfer between peers and diagnostics export remain pending. The local MP3 picker-to-playback path was subsequently verified in 0.2.1 as recorded above. They are implemented and covered in part by component tests, but are not reported as end-to-end passes. Internet was not isolated in this virtual environment, so these observations are **not** an offline Samsung acceptance result.
 
 No physical throughput, RTT distribution, setup-latency benchmark, acoustic accuracy number, or general performance claim is derived from a single emulator run. See [PERFORMANCE.md](PERFORMANCE.md) for repeatable measurement procedures and [HARDWARE-TEST.md](HARDWARE-TEST.md) for the required physical acceptance steps.
 
@@ -55,14 +59,14 @@ No physical throughput, RTT distribution, setup-latency benchmark, acoustic accu
 | Feature | Implemented | Compiled | Automated checks | Physical Android tested | Limits |
 |---|---|---|---|---|---|
 | Nearby discovery and explicit consent | Yes | Yes | Consent policy; emulator manual path | No | One host + one guest; Play services required |
-| Real FILE transfer, SHA-256, cache, retry | Yes | Yes | Transfer ordering/validation; emulator manual path | No | WAV only; retry starts over; radio interruption pending |
+| Real FILE transfer, SHA-256, cache, retry | Yes | Yes | Transfer ordering/validation; emulator manual path | No | PCM transfer, including locally decoded MP3; retry starts over; radio interruption pending |
 | Media3 full mix and stems | Yes | Yes | Five assets decode; playback and selection | No | Decoder switch can produce a gap; no listening test |
 | Host Play, Pause, Seek, Stop and end/restart | Yes | Yes | Timeline and actual player tests | No | Soft scheduling; no sample-accuracy guarantee |
 | Four-timestamp clock estimation | Yes | Yes | Offset sign, asymmetry, recent quality, degradation/recovery | No | Link asymmetry biases offset |
 | Drift correction and speaker delay | Yes | Yes | Error sign, persistence, bounded speed and seek policy | No | Logical player error excludes speaker latency |
 | Reconnect and cache reuse | Yes | Yes | Reconnection timeline; manual virtual-device recovery check pending | No | Explicit reconnect + code confirmation; no partial transfer resume |
 | Diagnostics and CSV export | Yes | Yes | Underlying estimator/statistics tests | No | Snapshot only; export picker requires manual acceptance |
-| File picker imports | Yes | Yes | WAV parser, exact frame alignment/content validation | No | System picker end-to-end pending; aligned PCM16 only |
+| File picker imports | Yes | Yes | WAV parser, exact frame alignment/content validation | No | MP3 songs or aligned PCM16 WAV stems |
 | Phone/tablet UI and failure recovery | Yes | Yes | Compose tests, recreation/background test and emulator screenshots | No | Rotation, text scaling and older Android versions need hardware matrix |
 | Original music and reproducible build | Yes | Yes | Hash/alignment/no-clipping checks; APK produced | No | Debug signing; original synthesized lead |
 

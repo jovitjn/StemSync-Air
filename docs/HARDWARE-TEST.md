@@ -15,7 +15,7 @@ Status: **not executed on physical devices in the development environment**. Emu
 6. Confirm that BOTH devices display the same Nearby authentication code. First exercise Reject and verify that no guest participant or transfer is accepted. Connect again and explicitly select Codes match on both devices.
 7. Allow the original demo transfer to complete. A fresh guest does not copy its bundled demo to its playable library; it requests FILE payloads from the host. Observe actual byte progress, Verifying, then Ready. The host should show the guest ready only after it has prepared audio and collected clock samples.
 8. Export Connection details on both devices. Compare the song identifiers and SHA-256 entries. Hash agreement is meaningful only alongside the receiver's successful private-file verification, not merely identical displayed metadata.
-9. Stronger transfer test: select a short original PCM16 WAV **present only on the phone**, using Import WAV files. Do not pre-copy it to the tablet. Observe the tablet's transfer, verification, preparation and subsequent playback. Optionally clear tablet app storage first to guarantee a cache miss; this erases only the test app's cache and settings.
+9. Stronger transfer test: select a short original PCM16 WAV **present only on the phone**, using Import song / stems. Do not pre-copy it to the tablet. Observe the tablet's transfer, verification, preparation and subsequent playback. Optionally clear tablet app storage first to guarantee a cache miss; this erases only the test app's cache and settings.
 
 ## Shared playback
 
@@ -47,3 +47,7 @@ For an acoustic measurement, use an **external** recording device or measurement
 | Pending | | | | | | | | Not measured | | |
 
 Keep failed trials. Capture diagnostics before/after each interruption. Record warm-cache versus cold-transfer runs separately. A claimed two-device acceptance requires every core step above to pass on the named physical devices.
+
+## MP3 import acceptance (0.2.1)
+
+Select a normal MP3 present only on the host using Import song / stems. Wait for decoding, transfer and guest readiness, then exercise Play/Pause/Seek. Repeat with stereo CBR and VBR files and a longer song. Input and decoded PCM are each limited to 100 MiB; oversized output must produce a visible error without replacing the current song. MP3 stems are not accepted in multi-file selections; use aligned WAVs.
