@@ -23,9 +23,10 @@ data class UiState(
     val hosts: Map<String,String> = emptyMap(), val peers: List<Peer> = emptyList(), val auth: Auth? = null,
     val tracks: List<Track> = emptyList(), val cachedIds: Set<String> = emptySet(), val selected: String? = null,
     val transfers: List<Transfer> = emptyList(), val playing: Boolean = false, val position: Long = 0, val duration: Long = 32000,
-    val prepared: Boolean = false, val error: String? = null, val busy: Boolean = false,
+    val prepared: Boolean = false, val sessionReady: Boolean = false, val error: String? = null, val busy: Boolean = false,
     val rtt: Double? = null, val jitter: Double? = null, val offset: Double? = null, val syncAge: Double? = null,
     val timelineError: Long? = null, val throughput: Double? = null, val reconnects: Int = 0,
+    val timingStatus: String = "Collecting timing samples…", val timingUncertainty: Double? = null,
     val volume: Float = .8f, val calibrationMs: Float = 0f, val syncReady: Boolean = false
 )
 
@@ -52,6 +53,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private var lastApplied = -1L
     private var endedRevision = -1L
     private var lastDrift = 0L
+    private var selectedTrack: Track? = null
     private var localTracks = emptyList<Track>()
     private var manifest = emptyList<Track>()
     private val names = mutableMapOf<String,String>()
@@ -63,15 +65,14 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private val started = mutableMapOf<Long,Long>()
     private val verifying = mutableSetOf<Long>()
     private val gate = TransferGate()
+    private val manifestScope = ManifestScope()
+    private val incomingScopes = mutableMapOf<Long,ManifestScope.Snapshot>()
+    private var manifestJob: Job? = null
     private var generation = 0
     private var searchJob: Job? = null
     private var libraryJob: Job? = null
     init {
         player.player.volume = state.value.volume
-        libraryJob = viewModelScope.launch {
-            localTracks = withContext(Dispatchers.IO) { library.tracks() }
-            refreshCache()
-        }
         viewModelScope.launch { while (isActive) { tick(); delay(20) } }
         viewModelScope.launch { while (isActive) { delay(750); synchronize(); expireTransfers() } }
     }
@@ -95,6 +96,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     }
     fun reconnect() {
         if (state.value.role != "guest") return
+        manifestScope.clear(); manifestJob?.cancel()
         host?.let { network.disconnect(it) }; host=null; clock.clear(); pendingSync.clear(); lastReady=null; lastApplied=-1; drift.reset(); player.player.pause()
         mutate { it.copy(peers=emptyList(),hosts=emptyMap(),status="Searching again · confirm the new code") }; search()
     }
@@ -128,21 +130,21 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         everConnected=true
         if (state.value.role=="host") {
             send(id,message(Kind.HELLO)); if (manifest.isNotEmpty()) sendManifest(id)
-        } else { host=id; lastApplied=-1; drift.reset(); network.stopDiscovery(); searchJob?.cancel(); clock.clear(); pendingSync.clear(); lastReady=null }
+        } else { manifestScope.clear(); host=id; lastApplied=-1; drift.reset(); network.stopDiscovery(); searchJob?.cancel(); clock.clear(); pendingSync.clear(); lastReady=null }
     }
     override fun disconnected(id: String) {
         mutate { it.copy(peers=it.peers.filterNot { p->p.id==id },auth=null,status=if (it.role=="host") "Guest disconnected · room remains open" else "Connection lost. Tap Reconnect to recover.") }
         incoming.filterValues { it.first==id }.keys.toList().forEach { failTransfer(it,"Connection interrupted") }
         outgoing.filterValues { it.first==id }.keys.toList().forEach { failTransfer(it,"Connection interrupted") }
-        if (host==id) { host=null; lastApplied=-1; drift.reset(); player.player.pause(); clock.clear(); pendingSync.clear(); lastReady=null; mutate { it.copy(syncReady=false) } }
+        if (host==id) { manifestScope.clear(); manifestJob?.cancel(); host=null; lastApplied=-1; drift.reset(); player.player.pause(); clock.clear(); pendingSync.clear(); lastReady=null; mutate { it.copy(syncReady=false) } }
     }
     override fun failure(message: String) { mutate { it.copy(error=message.take(220)) } }
     fun clearError() { mutate { it.copy(error=null) } }
     fun leave() { reset(); mutate { UiState(volume=it.volume,calibrationMs=it.calibrationMs) } }
     private fun reset() {
-        generation++; searchJob?.cancel(); libraryJob?.cancel(); network.stop(); player.player.pause(); player.player.clearMediaItems()
+        generation++; manifestScope.clear(); manifestJob?.cancel(); incomingScopes.clear(); searchJob?.cancel(); libraryJob?.cancel(); network.stop(); player.player.pause(); player.player.clearMediaItems()
         payloads.keys.toList().forEach { cleanup(it) }; incoming.clear(); outgoing.clear(); started.clear(); verifying.clear()
-        host=null; sessionId=""; timeline.clear(); clock.clear(); drift.reset(); pendingSync.clear(); dedup.clear(); lastReady=null; lastApplied=-1; endedRevision=-1; revision=0; songRevision=0; manifestRevision=-1; manifestSequence=-1; manifest=emptyList(); everConnected=false
+        host=null; selectedTrack=null; localTracks=emptyList(); sessionId=""; timeline.clear(); clock.clear(); drift.reset(); pendingSync.clear(); dedup.clear(); lastReady=null; lastApplied=-1; endedRevision=-1; revision=0; songRevision=0; manifestRevision=-1; manifestSequence=-1; manifest=emptyList(); everConnected=false
         mutate { UiState(volume=it.volume,calibrationMs=it.calibrationMs) }
     }
     fun loadDemo() {
@@ -163,7 +165,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
                 require(uris.size <= 6) { "Select at most six aligned PCM WAV files" }
                 val tracks=uris.map { library.import(it) }
                 if (tracks.size==1) tracks else {
-                    require(tracks.map { it.sampleRate to it.durationMs }.distinct().size==1) { "Stems must have matching sample rate and duration" }
+                    Wav.requireAligned(tracks.map { Wav.inspect(library.file(it)) })
                     require(tracks.map { it.id }.distinct().size == tracks.size) { "Choose different stem files" }
                     val song=tracks.first().songId
                     tracks.mapIndexed { index,t -> t.copy(songId=song,stem="Stem ${index+1}").also { library.remember(it) } }
@@ -187,7 +189,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         val track=manifest.firstOrNull { it.id==id } ?: return
         if (id !in state.value.cachedIds) return
         val position=(timeline.current ?: timeline.latest)?.positionAt(hostNow()-state.value.calibrationMs.toLong()*1_000_000) ?: 0
-        lastReady=null; drift.reset(); player.load(id,library.file(track),position)
+        lastReady=null; drift.reset(); selectedTrack=track; player.load(id,library.file(track),position)
         lastApplied=-1
         mutate { it.copy(selected=id,prepared=false) }; updatePrepared()
     }
@@ -204,7 +206,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     fun stop() = command(false,0)
     private fun command(playing: Boolean, position: Long) {
         if (state.value.role!="host" || manifest.isEmpty()) return
-        if (playing && (!SessionPolicy.mayStart(player.ready,state.value.peers.map { it.ready }))) { failure("Waiting for every connected device to verify, prepare and synchronize."); return }
+        if (playing && (!SessionPolicy.mayStart(player.ready,state.value.peers.map { it.ready }))) { failure("Waiting for every connected device to verify files, prepare audio and have stable timing."); return }
         val track=manifest.first()
         val next=Timeline(sessionId,track.songId,++revision,playing,position.coerceIn(0,track.durationMs),nowNs()+1_000_000_000,track.durationMs)
         timeline.accept(next); broadcast(message(Kind.TIMELINE,snapshot=next))
@@ -217,7 +219,15 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private fun hostNow() = if (state.value.role=="host") nowNs() else clock.hostTime(nowNs())
     private fun updatePrepared() {
         val ready=foreground && player.ready && state.value.selected in state.value.cachedIds && manifest.isNotEmpty() && manifest.all { it.id in state.value.cachedIds } && (state.value.role=="host" || clock.fresh(nowNs()))
-        mutate { it.copy(prepared=player.ready,syncReady=if (it.role=="host") true else clock.fresh(nowNs())) }
+        val time=nowNs()
+        val timingStatus=if (state.value.role=="host") "Host clock · no estimate needed" else when(clock.quality(time)) {
+            ClockEstimator.Quality.WARMING_UP -> "Collecting fresh timing samples…"
+            ClockEstimator.Quality.STALE -> "Timing samples expired · waiting for the host"
+            ClockEstimator.Quality.HIGH_RTT -> "Connection timing is delayed · waiting for a stable link"
+            ClockEstimator.Quality.HIGH_UNCERTAINTY -> "Timing is uncertain · resynchronizing"
+            ClockEstimator.Quality.READY -> "Timing ready"
+        }
+        mutate { it.copy(prepared=player.ready,sessionReady=ready,syncReady=if (it.role=="host") true else clock.fresh(time),timingStatus=timingStatus,timingUncertainty=if (it.role=="host") null else clock.uncertaintyMs(time)) }
         if (host!=null && sessionId.isNotBlank() && lastReady!=ready) { send(host!!,message(Kind.READY,ready=ready,contentId=manifest.firstOrNull()?.songId,rev=manifestRevision)); lastReady=ready }
     }
     private fun synchronize() {
@@ -231,7 +241,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
             val m=Protocol.decode(bytes)
             require(state.value.peers.any { it.id==id })
             if (m.kind==Kind.HELLO && state.value.role=="guest" && id==host) {
-                if (sessionId!=m.sessionId) { timeline.clear(); lastApplied=-1; manifestRevision=-1; manifestSequence=-1; sessionId=m.sessionId }
+                if (sessionId!=m.sessionId) { manifestScope.clear(); manifestJob?.cancel(); timeline.clear(); lastApplied=-1; manifestRevision=-1; manifestSequence=-1; sessionId=m.sessionId }
                 require(sessionId.isNotBlank()); return@runCatching
             }
             require(m.sessionId==sessionId && sessionId.isNotBlank()) { "Session mismatch" }
@@ -265,24 +275,28 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
                 require(m.revision!=null && m.revision>=0)
                 require(m.tracks.isNotEmpty() && m.tracks.map { it.id }.distinct().size==m.tracks.size)
                 require(m.tracks.map { Triple(it.songId,it.durationMs,it.sampleRate) }.distinct().size==1)
-                manifest=m.tracks; manifestRevision=m.revision; manifestSequence=m.sequenceNumber; lastReady=null
-                val gen=generation
-                viewModelScope.launch {
-                    localTracks=withContext(Dispatchers.IO) { library.tracks() }
-                    if (gen!=generation) return@launch
-                    refreshCache(); mutate { it.copy(tracks=manifest,duration=manifest.first().durationMs) }
-                    // IDs alone never establish a cache hit.
-                    val verified=manifest.filter { expected->localTracks.any { it.id==expected.id && it.sha256==expected.sha256 } }
-                    mutate { it.copy(cachedIds=verified.map { t->t.id }.toSet()) }
-                    manifest.filterNot { it.id in state.value.cachedIds }.forEach { send(id,message(Kind.NEED,contentId=it.id)) }
-                    if (state.value.selected !in state.value.cachedIds || player.selectedId!=state.value.selected) verified.firstOrNull()?.let { select(it.id) }
+                // Copy the manifest once. IO may finish after another song/session arrived.
+                val snapshot=manifestScope.begin(sessionId,m.sequenceNumber,m.tracks)
+                manifest=snapshot.tracks; manifestRevision=m.revision; manifestSequence=m.sequenceNumber; lastReady=null
+                manifestJob?.cancel()
+                if (selectedTrack !in snapshot.tracks) { player.player.pause(); player.player.clearMediaItems(); selectedTrack=null; mutate { it.copy(selected=null,prepared=false) } }
+                incoming.keys.toList().forEach { network.cancel(it); cleanup(it) }
+                mutate { it.copy(tracks=snapshot.tracks,cachedIds=emptySet(),duration=snapshot.tracks.first().durationMs) }
+                manifestJob=viewModelScope.launch {
+                    val verified=withContext(Dispatchers.IO) { library.verifiedTracks(snapshot.tracks) }
+                    if (!manifestScope.accepts(snapshot) || host!=id) return@launch
+                    localTracks=verified
+                    refreshCache()
+                    snapshot.tracks.filterNot { it.id in state.value.cachedIds }.forEach { send(id,message(Kind.NEED,contentId=it.id)) }
+                    if (state.value.selected !in state.value.cachedIds || selectedTrack !in verified) verified.firstOrNull()?.let { select(it.id) }
                     updatePrepared()
                 }
             }
             Kind.FILE_META -> {
                 require(m.tracks.size==1); val t=m.tracks.single(); require(t in manifest)
                 val pid=requireNotNull(m.payloadId); require(incoming.size<8 || pid in incoming)
-                gate.metadata(pid,t); incoming[pid]=id to t; started.putIfAbsent(pid,nowNs()); transfer(pid,t,TransferPhase.QUEUED,0); verify(pid)
+                val scope=requireNotNull(manifestScope.current()); require(manifestScope.accepts(scope,t))
+                gate.metadata(pid,t); incomingScopes[pid]=scope; incoming[pid]=id to t; started.putIfAbsent(pid,nowNs()); transfer(pid,t,TransferPhase.QUEUED,0); verify(pid)
             }
             Kind.SYNC_RESPONSE -> {
                 val t1=requireNotNull(m.t1); require(pendingSync.remove(t1)) { "Unsolicited or stale sync reply" }
@@ -334,6 +348,8 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     }
     private fun verify(pid: Long) {
         val track=gate.claim(pid) ?: return
+        val scope=incomingScopes[pid] ?: return
+        if (!manifestScope.accepts(scope,track)) { cleanup(pid); return }
         val p=payloads[pid] ?: return
         val uri=p.asFile()?.asUri() ?: run { failTransfer(pid,"Received file URI unavailable"); return }
         val endpoint=incoming[pid]?.first ?: return
@@ -341,12 +357,12 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         val gen=generation
         viewModelScope.launch {
             val result=withContext(Dispatchers.IO) { runCatching { library.receive(uri,track) }.also { runCatching { getApplication<Application>().contentResolver.delete(uri,null,null) } } }
-            if (gen!=generation || pid !in incoming) return@launch
+            if (gen!=generation || pid !in incoming || !manifestScope.accepts(scope,track) || incomingScopes[pid]!=scope) return@launch
             result.onSuccess {
                 localTracks=localTracks.filterNot { it.id==track.id }+track
                 mutate { it.copy(cachedIds=it.cachedIds+track.id) }; transfer(pid,track,TransferPhase.READY,track.size)
                 send(endpoint,message(Kind.FILE_READY,contentId=track.id))
-                if (state.value.selected !in state.value.cachedIds) select(track.id)
+                if (state.value.selected !in state.value.cachedIds || state.value.selected==track.id) select(track.id)
                 updatePrepared()
             }.onFailure { transfer(pid,track,TransferPhase.FAILED,0); send(endpoint,message(Kind.FILE_FAILED,contentId=track.id)); failure("Could not verify ${track.stem}: ${it.message}") }
             cleanup(pid)
@@ -365,10 +381,11 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         if (pid in incoming && pid !in verifying) p?.asFile()?.asUri()?.let { uri ->
             viewModelScope.launch(Dispatchers.IO) { runCatching { getApplication<Application>().contentResolver.delete(uri,null,null) } }
         }
-        p?.close(); incoming.remove(pid); outgoing.remove(pid); started.remove(pid); verifying.remove(pid); gate.remove(pid)
+        p?.close(); incomingScopes.remove(pid); incoming.remove(pid); outgoing.remove(pid); started.remove(pid); verifying.remove(pid); gate.remove(pid)
     }
     private fun expireTransfers() { started.filter { nowNs()-it.value>120_000_000_000L && it.key !in verifying }.keys.toList().forEach { failTransfer(it,"Transfer timed out. Retry music.") } }
     fun foreground(active: Boolean) {
+        if (foreground==active) return
         foreground=active
         if (!active) { if (state.value.role=="host") command(false,state.value.position); player.player.pause() }
         else lastApplied=-1
@@ -378,7 +395,7 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
         val local=nowNs(); val hostTime=hostNow()-state.value.calibrationMs.toLong()*1_000_000
         val clockUsable=state.value.role=="host" || host!=null && clock.fresh(local)
         val current=if(clockUsable) timeline.at(hostTime) else timeline.current
-        val valid=foreground && player.ready && clockUsable && current!=null && hostTime>=current.effectiveHostTimeNs && current.trackId==manifest.firstOrNull()?.songId
+        val valid=foreground && player.ready && state.value.selected in state.value.cachedIds && clockUsable && current!=null && hostTime>=current.effectiveHostTimeNs && current.trackId==manifest.firstOrNull()?.songId
         if (current!=null && valid) {
             val target=current.positionAt(hostTime)
             if (lastApplied!=current.playbackRevision) {
@@ -415,9 +432,9 @@ class SessionViewModel(app: Application) : AndroidViewModel(app), NearbyTranspor
     private var lastUi=0L
     fun diagnostics(): String = buildString {
         appendLine("StemSync Air diagnostics — actual app observations; acoustic accuracy UNVERIFIED")
-        appendLine("role,status,rtt_mean_ms,rtt_population_sd_ms,estimated_host_minus_guest_ms,sync_age_s,estimated_timeline_error_ms,transfer_MiB_s,reconnections")
+        appendLine("role,status,rtt_mean_ms,rtt_population_sd_ms,estimated_host_minus_guest_ms,sync_age_s,estimated_timeline_error_ms,transfer_MiB_s,reconnections,timing_uncertainty_ms,timing_readiness")
         val s=state.value
-        appendLine("${s.role},${s.status.replace(',',';')},${s.rtt ?: ""},${s.jitter ?: ""},${s.offset ?: ""},${s.syncAge ?: ""},${s.timelineError ?: ""},${s.throughput ?: ""},${s.reconnects}")
+        appendLine("${s.role},${s.status.replace(',',';')},${s.rtt ?: ""},${s.jitter ?: ""},${s.offset ?: ""},${s.syncAge ?: ""},${s.timelineError ?: ""},${s.throughput ?: ""},${s.reconnects},${s.timingUncertainty ?: ""},${s.timingStatus}")
         manifest.forEach { appendLine("content,${it.id},sha256,${it.sha256}") }
     }
     override fun onCleared() { reset(); player.release(); super.onCleared() }

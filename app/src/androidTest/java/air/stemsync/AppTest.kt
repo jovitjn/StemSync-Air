@@ -67,6 +67,27 @@ class AppTest {
         compose.waitUntil(10000) { vm.state.value.playing && vm.state.value.position<5000 }
         compose.runOnUiThread { vm.stop() }
     }
+    @Test fun recreationPreservesPlaybackButTrueBackgroundPauses() {
+        lateinit var vm: SessionViewModel
+        compose.runOnUiThread { vm=androidx.lifecycle.ViewModelProvider(compose.activity)[SessionViewModel::class.java]; vm.hostSession() }
+        compose.waitUntil(20000) { !vm.state.value.busy }
+        compose.runOnUiThread { vm.loadDemo() }
+        compose.waitUntil(20000) { vm.state.value.prepared && !vm.state.value.busy }
+        compose.runOnUiThread { vm.volume(0f);vm.playPause() }
+        compose.waitUntil(10000) { vm.state.value.playing && vm.state.value.position>500 }
+        val before=vm.state.value.position
+        compose.activityRule.scenario.recreate()
+        compose.runOnUiThread { Assert.assertSame(vm,androidx.lifecycle.ViewModelProvider(compose.activity)[SessionViewModel::class.java]) }
+        compose.waitUntil(10000) { vm.state.value.playing && vm.state.value.position>before+1500 }
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.CREATED)
+        val deadline=System.nanoTime()+5_000_000_000L
+        while (vm.state.value.playing && System.nanoTime()<deadline) Thread.sleep(50)
+        Assert.assertFalse("Actual backgrounding must pause playback",vm.state.value.playing)
+        compose.activityRule.scenario.moveToState(androidx.lifecycle.Lifecycle.State.RESUMED)
+        // The host's scheduled pause must remain authoritative after returning.
+        Thread.sleep(1500)
+        Assert.assertFalse(vm.state.value.playing)
+    }
     @Test fun everyDemoStemDecodesWithMedia3() {
         val instrument=InstrumentationRegistry.getInstrumentation()
         val tracks=Library(instrument.targetContext).installDemo()

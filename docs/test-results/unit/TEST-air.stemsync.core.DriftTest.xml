@@ -1,7 +1,6 @@
-<?xml version='1.0' encoding='utf-8'?>
-<testsuite name="air.stemsync.core.DriftTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-15T07:18:06.971Z" hostname="validation-host" time="0.003">
+<testsuite name="air.stemsync.core.DriftTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.004Z" hostname="validation-host" time="0.002">
   <properties />
-  <testcase name="alternatingNoiseDoesNotSeek" classname="air.stemsync.core.DriftTest" time="0.002" />
+  <testcase name="alternatingNoiseDoesNotSeek" classname="air.stemsync.core.DriftTest" time="0.001" />
   <testcase name="smallErrorIgnored" classname="air.stemsync.core.DriftTest" time="0.0" />
   <testcase name="aheadSlowsDownAfterPersistence" classname="air.stemsync.core.DriftTest" time="0.0" />
   <testcase name="largeSustainedErrorSeeks" classname="air.stemsync.core.DriftTest" time="0.0" />

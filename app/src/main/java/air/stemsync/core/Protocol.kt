@@ -74,6 +74,9 @@ object Files {
 
 data class WavInfo(val sampleRate: Int, val channels: Int, val frames: Long) { val durationMs get() = frames * 1000 / sampleRate }
 object Wav {
+    fun requireAligned(stems: List<WavInfo>) {
+        require(stems.isNotEmpty() && stems.map { it.sampleRate to it.frames }.distinct().size == 1) { "Stems must have identical sample rates and PCM frame counts" }
+    }
     /** Narrow, deliberate MVP: uncompressed 16-bit PCM WAV, mono or stereo. */
     fun inspect(file: File): WavInfo = RandomAccessFile(file, "r").use { f ->
         fun tag(): String { val b = ByteArray(4); f.readFully(b); return String(b, Charsets.US_ASCII) }

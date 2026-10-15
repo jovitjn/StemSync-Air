@@ -6,7 +6,7 @@ A guitar part on the phone. Drums on the tablet. The same song, shared over loca
 
 StemSync Air is an Android music project built around a musician's question: can the nearby devices we already have become a coordinated listening system? It combines an original instrumental with local file distribution, clock estimation and a host-controlled playback timeline. It is designed for a guitarist and Electrical Engineering master's student interested in wireless communication and DSP.
 
-**Status:** installable debug build; implementation and automated validation are documented in [VALIDATION.md](docs/VALIDATION.md). Physical Samsung phone/tablet acceptance and acoustic synchronization remain unverified. No sample-perfect or zero-latency claim is made.
+**Status:** version 0.2.0 installable debug build; implementation and automated validation are documented in [VALIDATION.md](docs/VALIDATION.md). Physical Samsung phone/tablet acceptance and acoustic synchronization remain unverified. No sample-perfect or zero-latency claim is made.
 
 <img src="docs/screenshots/phone-home.png" width="320" alt="StemSync Air home on an Android phone emulator">
 
@@ -40,7 +40,7 @@ adb -s PHONE_SERIAL shell am start -n air.stemsync/.MainActivity
 5. Press **Play together** on the host. Choose **Full mix** for group listening, or different instrument chips for distributed instruments. The host also controls pause and seeking.
 6. Keep both apps visible. After a lost connection, restore the radios, tap **Reconnect**, reauthenticate and wait for fresh timing estimates.
 
-For a host-only file test, use **Import WAV files** on the phone with an original file that is absent from the tablet. A single file is a full song. Multiple selected files are treated as stems; they must have the same duration and sample rate and already be musically aligned. Supported audio: uncompressed 16-bit PCM WAV, mono/stereo, 22.05/24/44.1/48 kHz, ≤100 MiB per file.
+For a host-only file test, use **Import WAV files** on the phone with an original file that is absent from the tablet. A single file is a full song. Multiple selected files are treated as stems; they must have identical PCM frame counts and sample rates and already be musically aligned. Supported audio: uncompressed 16-bit PCM WAV, mono/stereo, 22.05/24/44.1/48 kHz, ≤100 MiB per file.
 
 **Help** contains permissions/settings links and a ±300 ms speaker-delay control. Positive delay makes that device later. **Connection details** shows real available observations and exports a diagnostic snapshot. An unavailable measurement stays “Not measured.”
 
@@ -80,7 +80,7 @@ hostMinusGuest = ((t2 - t1) + (t3 - t4)) / 2
 networkRTT    = (t4 - t1) - (t3 - t2)
 ```
 
-All timestamps use monotonic nanoseconds. The estimator prefers low-RTT samples and slews active updates. The host schedules transitions one second ahead; guests translate the shared host timeline using their offset estimate. A revision prevents older playback commands from overwriting new ones. Drift is evaluated against Media3's player position, with bounded speed correction and occasional sustained-error seeks.
+All timestamps use monotonic nanoseconds. The estimator prefers recent low-RTT samples and slews active updates. Playback readiness also requires five recent samples, RTT ≤150 ms, a network uncertainty budget ≤75 ms and a latest sample ≤2.5 seconds old. These conservative thresholds do not describe acoustic accuracy. The host schedules transitions one second ahead; guests translate the shared host timeline using their offset estimate. A revision prevents older playback commands from overwriting new ones. Drift is evaluated against Media3's player position, with bounded speed correction and occasional sustained-error seeks.
 
 These estimates are affected by asymmetric links, callback scheduling, decoder behavior and unknown speaker latency. See [ENGINEERING.md](docs/ENGINEERING.md) for equations, sign conventions, permission decisions, transfer safety, lifecycle behavior and trade-offs.
 

@@ -13,7 +13,7 @@ class TimingTest {
     @Test fun hostConversion() { val c=ClockEstimator(); sample(c,37); assertEquals(2_037_000_000,c.hostTime(2_000_000_000)) }
     @Test fun asymmetryHasKnownBias() { val c=ClockEstimator(); sample(c,37,30,10); assertEquals(47.0,c.offsetNs/1e6,1e-9) }
     @Test fun hostProcessingRemovedFromRtt() { val c=ClockEstimator(); sample(c,37,10,10,400); assertEquals(20.0,c.rttMs!!,1e-9) }
-    @Test fun jitterOutliersDoNotMoveBestEstimate() { val c=ClockEstimator(); repeat(8){sample(c,37,10,10,n=it.toLong())}; repeat(12){sample(c,37,200L+it,10,n=(it+8).toLong())}; assertEquals(37.0,c.offsetNs/1e6,1e-9); assertTrue(c.jitterMs!!>0) }
+    @Test fun jitterOutliersDoNotMoveBestEstimate() { val c=ClockEstimator(); repeat(8){sample(c,37,10,10,n=it.toLong())}; repeat(2){sample(c,37,200L+it,10,n=(it+8).toLong())}; assertEquals(37.0,c.offsetNs/1e6,1e-9); assertTrue(c.jitterMs!!>0) }
     @Test fun negativeTimestampsRejected() { assertFalse(ClockEstimator().add(-1,10,20,30)) }
     @Test fun reversedGuestTimeRejected() { assertFalse(ClockEstimator().add(100,101,102,99)) }
     @Test fun reversedHostTimeRejected() { assertFalse(ClockEstimator().add(100,102,101,110)) }
@@ -24,6 +24,15 @@ class TimingTest {
     @Test fun rollingWindowBounded() { val c=ClockEstimator(); repeat(50){sample(c,1,n=it.toLong())}; assertEquals(24,c.count) }
     @Test fun freshnessAndReset() { val c=ClockEstimator(); repeat(5){sample(c,37,n=it.toLong())}; assertTrue(c.fresh(5_500_000_000)); assertFalse(c.fresh(20_000_000_000)); c.clear(); assertFalse(c.ready) }
     @Test fun populationStandardDeviation() { val c=ClockEstimator(); sample(c,0,5,5); sample(c,0,15,15,n=1); assertEquals(20.0,c.rttMs!!,0.001); assertEquals(10.0,c.jitterMs!!,0.001) }
+    @Test fun uniformlyDelayedSamplesNeverBecomeReady() { val c=ClockEstimator(); repeat(5){sample(c,37,1000,1000,n=(it*3).toLong())}; assertFalse(c.ready); assertEquals(ClockEstimator.Quality.WARMING_UP,c.quality(c.lastSampleNs!!)) }
+    @Test fun fiveCongestedSamplesRejectedByQualityGate() { val c=ClockEstimator(); repeat(5){sample(c,37,100,100,n=it.toLong())}; assertEquals(ClockEstimator.Quality.HIGH_RTT,c.quality(c.lastSampleNs!!)); assertFalse(c.ready) }
+    @Test fun latestCongestionCannotHideBehindHistoricFastSamples() { val c=ClockEstimator(); repeat(5){sample(c,37,n=it.toLong())};assertTrue(c.ready);sample(c,37,300,300,n=5);assertEquals(ClockEstimator.Quality.HIGH_RTT,c.quality(c.lastSampleNs!!));assertFalse(c.ready) }
+    @Test fun cleanRecentSamplesRestoreReadinessAfterCongestion() { val c=ClockEstimator();repeat(5){sample(c,37,300,300,n=it.toLong())};assertFalse(c.ready);repeat(5){sample(c,37,n=(it+6).toLong())};assertTrue(c.ready);assertEquals(37.0,c.offsetNs/1e6,.001) }
+    @Test fun oldLowRttSamplesExpireFromOffsetEstimate() { val c=ClockEstimator();repeat(5){sample(c,0,n=it.toLong())};repeat(5){sample(c,90,20,20,n=(it+12).toLong())};assertEquals(90.0,c.offsetNs/1e6,.001);assertTrue(c.ready) }
+    @Test fun recentButDivergentOffsetsAreUncertain() { val c=ClockEstimator();repeat(5){sample(c,if(it%2==0) 0 else 200,n=it.toLong())};assertEquals(ClockEstimator.Quality.HIGH_UNCERTAINTY,c.quality(c.lastSampleNs!!));assertFalse(c.ready) }
+    @Test fun slewedOffsetLagMustReacquireBeforeReady() { val c=ClockEstimator();repeat(5){sample(c,0,n=it.toLong())};repeat(5){sample(c,200,n=(it+10).toLong(),playing=true)};assertEquals(ClockEstimator.Quality.HIGH_UNCERTAINTY,c.quality(c.lastSampleNs!!));sample(c,200,n=15);assertTrue(c.ready) }
+    @Test fun quietLinkExpiresBeforeOldWindowCanAuthorizePlayback() { val c=ClockEstimator();repeat(5){sample(c,37,n=it.toLong())};assertFalse(c.fresh(c.lastSampleNs!!+2_500_000_001));assertEquals(ClockEstimator.Quality.STALE,c.quality(c.lastSampleNs!!+2_500_000_001)) }
+
 }
 class TimelineTest {
     private fun line(rev: Long=1,playing: Boolean=true,pos: Long=0,time: Long=1_000_000_000,track: String="song")=Timeline("session",track,rev,playing,pos,time,60000)

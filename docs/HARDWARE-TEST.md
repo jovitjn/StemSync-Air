@@ -32,7 +32,7 @@ Status: **not executed on physical devices in the development environment**. Emu
 17. During playback, disable a tablet radio or move it out of range. Observe a visible disconnect or stale-clock pause. Restore radios, tap Reconnect, find the same host and **reauthenticate**. After cache validation and new clock estimates, verify the tablet rejoins at the host's current position. For a 32-second demo, do this promptly; a longer original WAV makes a 25-second-late recovery easier to evaluate.
 18. Background the guest and confirm local playback pauses. Return and confirm recovery while foregrounded. Background the host and verify a global pause is sent. Background playback is intentionally unsupported.
 19. Exercise audio focus by playing audio in another app or receiving a phone call. Record focus-loss behavior and explicit recovery with the host controls. Check that sound does not unexpectedly restart while interrupted.
-20. Repeat at portrait, landscape, tablet width and increased system text size. Check that actions can be scrolled into view and have understandable labels.
+20. Repeat at portrait, landscape, tablet width and increased system text size. During active playback, rotate or recreate the Activity and verify there is no global pause; genuinely backgrounding must still pause. Check that actions can be scrolled into view and have understandable labels.
 
 ## Audible calibration — subjective, not a precision measurement
 

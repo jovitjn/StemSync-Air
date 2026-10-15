@@ -11,7 +11,7 @@ class Library(private val context: Context) {
     private val root = File(context.filesDir, "audio").apply { mkdirs() }
     private val index = File(root, "library.json")
     fun file(track: Track) = File(root, track.sha256 + ".wav")
-    fun tracks(): List<Track> = runCatching { Protocol.json.decodeFromString<List<Track>>(index.readText()).filter { runCatching { it.validate(); Files.verified(file(it), it) }.getOrDefault(false) } }.getOrDefault(emptyList())
+    fun verifiedTracks(required: List<Track>): List<Track> = RequiredAudioCache.verified(required, ::file)
     @Synchronized fun remember(track: Track) {
         val old = runCatching { Protocol.json.decodeFromString<List<Track>>(index.readText()) }.getOrDefault(emptyList())
         val temp = File(root, "library.tmp")

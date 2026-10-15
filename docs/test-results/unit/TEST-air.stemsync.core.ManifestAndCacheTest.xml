@@ -1,0 +1,13 @@
+<testsuite name="air.stemsync.core.ManifestAndCacheTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.008Z" hostname="validation-host" time="0.233">
+  <properties />
+  <testcase name="oldTransferCannotMarkNewSongReady" classname="air.stemsync.core.ManifestAndCacheTest" time="0.048" />
+  <testcase name="validCachedContentNeedsNoIndexTrust" classname="air.stemsync.core.ManifestAndCacheTest" time="0.066" />
+  <testcase name="sameLengthCorruptedCacheIsRejectedOnNextVerification" classname="air.stemsync.core.ManifestAndCacheTest" time="0.073" />
+  <testcase name="capturedManifestDoesNotFollowMutableCallerList" classname="air.stemsync.core.ManifestAndCacheTest" time="0.001" />
+  <testcase name="delayedScanCannotPublishAfterNewManifest" classname="air.stemsync.core.ManifestAndCacheTest" time="0.007" />
+  <testcase name="onlyRequiredFilesAreRead" classname="air.stemsync.core.ManifestAndCacheTest" time="0.035" />
+  <testcase name="reconnectInvalidatesPendingWorkEvenForSameSessionAndSequence" classname="air.stemsync.core.ManifestAndCacheTest" time="0.001" />
+  <testcase name="missingRequiredFileIsNotReady" classname="air.stemsync.core.ManifestAndCacheTest" time="0.001" />
+  <system-out />
+  <system-err />
+</testsuite>

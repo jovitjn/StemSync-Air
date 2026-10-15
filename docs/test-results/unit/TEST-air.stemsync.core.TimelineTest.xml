@@ -1,19 +1,18 @@
-<?xml version='1.0' encoding='utf-8'?>
-<testsuite name="air.stemsync.core.TimelineTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-15T07:18:07.014Z" hostname="validation-host" time="0.014">
+<testsuite name="air.stemsync.core.TimelineTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.250Z" hostname="validation-host" time="0.009">
   <properties />
-  <testcase name="invalidPositionRejected" classname="air.stemsync.core.TimelineTest" time="0.007" />
-  <testcase name="lateJoin" classname="air.stemsync.core.TimelineTest" time="0.001" />
+  <testcase name="invalidPositionRejected" classname="air.stemsync.core.TimelineTest" time="0.002" />
+  <testcase name="lateJoin" classname="air.stemsync.core.TimelineTest" time="0.002" />
   <testcase name="pausedDoesNotAdvance" classname="air.stemsync.core.TimelineTest" time="0.0" />
   <testcase name="trackChangeAtBoundary" classname="air.stemsync.core.TimelineTest" time="0.0" />
-  <testcase name="reconnectAfter25Seconds" classname="air.stemsync.core.TimelineTest" time="0.003" />
-  <testcase name="staleAndDuplicateRejected" classname="air.stemsync.core.TimelineTest" time="0.001" />
-  <testcase name="resume" classname="air.stemsync.core.TimelineTest" time="0.0" />
+  <testcase name="reconnectAfter25Seconds" classname="air.stemsync.core.TimelineTest" time="0.002" />
+  <testcase name="staleAndDuplicateRejected" classname="air.stemsync.core.TimelineTest" time="0.0" />
+  <testcase name="resume" classname="air.stemsync.core.TimelineTest" time="0.001" />
   <testcase name="seek" classname="air.stemsync.core.TimelineTest" time="0.0" />
   <testcase name="invalidRateRejected" classname="air.stemsync.core.TimelineTest" time="0.0" />
-  <testcase name="scheduledStart" classname="air.stemsync.core.TimelineTest" time="0.001" />
+  <testcase name="scheduledStart" classname="air.stemsync.core.TimelineTest" time="0.0" />
   <testcase name="endClamps" classname="air.stemsync.core.TimelineTest" time="0.0" />
   <testcase name="wrongSessionRejected" classname="air.stemsync.core.TimelineTest" time="0.0" />
-  <testcase name="futurePauseKeepsOldTimelineUntilEffective" classname="air.stemsync.core.TimelineTest" time="0.0" />
+  <testcase name="futurePauseKeepsOldTimelineUntilEffective" classname="air.stemsync.core.TimelineTest" time="0.001" />
   <system-out />
   <system-err />
 </testsuite>

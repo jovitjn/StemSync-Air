@@ -22,6 +22,8 @@ No naive-start comparison graph is included: that experiment is optional and wou
 
 ## Limitations and follow-up
 
-The initial thresholds (25 ms deadband, three persistent samples, 250 ms hard correction, ±0.5% speed adjustment) are engineering defaults, not values optimized from Samsung measurements. The 20 ms scheduling poll has no hard deadline guarantee. Main-thread load and power management can increase its error. Characterize actual devices before changing these numbers.
+Timing-readiness thresholds (five samples within six seconds, latest ≤2.5 s, RTT ≤150 ms, network timing uncertainty budget ≤75 ms) are conservative defaults. The budget includes applied-offset lag and sample disagreement, and excludes speaker latency. They deliberately pause degraded guest playback rather than trust old fast samples.
+
+The initial drift thresholds (25 ms deadband, three persistent samples, 250 ms hard correction, ±0.5% speed adjustment) are engineering defaults, not values optimized from Samsung measurements. The 20 ms scheduling poll has no hard deadline guarantee. Main-thread load and power management can increase its error. Characterize actual devices before changing these numbers.
 
 A useful follow-up is a bounded timestamp trace export, percentile statistics, paired acoustic trials, and a comparison with an immediate-start control using the same content and network conditions. Do not report those future measurements as completed work.

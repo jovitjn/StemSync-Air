@@ -1,3 +1,4 @@
+Starting a Gradle Daemon, 1 busy Daemon could not be reused, use --status for details
 > Task :app:preBuild UP-TO-DATE
 > Task :app:preDebugBuild UP-TO-DATE
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
@@ -17,51 +18,30 @@
 > Task :app:processDebugManifest UP-TO-DATE
 > Task :app:processDebugManifestForPackage UP-TO-DATE
 > Task :app:processDebugResources UP-TO-DATE
-> Task :app:compileDebugKotlin UP-TO-DATE
 > Task :app:javaPreCompileDebug UP-TO-DATE
-> Task :app:compileDebugJavaWithJavac NO-SOURCE
 > Task :app:mergeDebugShaders UP-TO-DATE
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets UP-TO-DATE
 > Task :app:compressDebugAssets UP-TO-DATE
 > Task :app:desugarDebugFileDependencies UP-TO-DATE
-> Task :app:dexBuilderDebug UP-TO-DATE
-> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
-> Task :app:processDebugJavaRes UP-TO-DATE
-> Task :app:mergeDebugJavaResource UP-TO-DATE
 > Task :app:checkDebugDuplicateClasses UP-TO-DATE
 > Task :app:mergeExtDexDebug UP-TO-DATE
 > Task :app:mergeLibDexDebug UP-TO-DATE
-> Task :app:mergeProjectDexDebug UP-TO-DATE
 > Task :app:mergeDebugJniLibFolders UP-TO-DATE
 > Task :app:mergeDebugNativeLibs UP-TO-DATE
 > Task :app:stripDebugDebugSymbols UP-TO-DATE
 > Task :app:validateSigningDebug UP-TO-DATE
 > Task :app:writeDebugAppMetadata UP-TO-DATE
 > Task :app:writeDebugSigningConfigVersions UP-TO-DATE
-> Task :app:packageDebug UP-TO-DATE
-> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
-> Task :app:assembleDebug UP-TO-DATE
-> Task :app:bundleDebugClassesToRuntimeJar UP-TO-DATE
-> Task :app:bundleDebugClassesToCompileJar UP-TO-DATE
-> Task :app:compileDebugUnitTestKotlin UP-TO-DATE
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
 > Task :app:javaPreCompileDebugUnitTest UP-TO-DATE
-> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
 > Task :app:packageDebugUnitTestForUnitTest UP-TO-DATE
 > Task :app:processDebugUnitTestManifest UP-TO-DATE
 > Task :app:generateDebugUnitTestConfig UP-TO-DATE
-> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
-> Task :app:testDebugUnitTest UP-TO-DATE
 > Task :app:preDebugAndroidTestBuild SKIPPED
 > Task :app:generateDebugAndroidTestResValues UP-TO-DATE
-> Task :app:generateDebugAndroidTestLintModel
 > Task :app:extractProguardFiles UP-TO-DATE
-> Task :app:generateDebugLintReportModel UP-TO-DATE
-> Task :app:generateDebugUnitTestLintModel UP-TO-DATE
-> Task :app:lintAnalyzeDebug UP-TO-DATE
-> Task :app:lintAnalyzeDebugUnitTest UP-TO-DATE
 > Task :app:checkDebugAndroidTestAarMetadata UP-TO-DATE
 > Task :app:processDebugAndroidTestNavigationResources UP-TO-DATE
 > Task :app:compileDebugAndroidTestNavigationResources UP-TO-DATE
@@ -86,32 +66,63 @@
 > Task :app:validateSigningDebugAndroidTest UP-TO-DATE
 > Task :app:writeDebugAndroidTestSigningConfigVersions UP-TO-DATE
 
+> Task :app:compileDebugKotlin
+w: file://<workspace>/outputs/stemsync-air/app/src/main/java/air/stemsync/SessionViewModel.kt:202:55 Condition is always 'true'.
+w: file://<workspace>/outputs/stemsync-air/app/src/main/java/air/stemsync/SessionViewModel.kt:202:55 Condition is always 'true'.
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics UP-TO-DATE
+> Task :app:processDebugJavaRes UP-TO-DATE
+> Task :app:mergeDebugJavaResource UP-TO-DATE
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:mergeProjectDexDebug
+> Task :app:generateDebugLintReportModel
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:generateDebugAndroidTestLintModel
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes UP-TO-DATE
+> Task :app:testDebugUnitTest
+> Task :app:generateDebugUnitTestLintModel
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect UP-TO-DATE
+> Task :app:assembleDebug
+
 > Task :app:compileDebugAndroidTestKotlin
-w: file:///Users/jovitjayan/Documents/Codex/2026-10-14/files-pasted-by-the-user-you/outputs/stemsync-air/app/src/androidTest/java/air/stemsync/AppTest.kt:89:92 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
+w: file://<workspace>/outputs/stemsync-air/app/src/androidTest/java/air/stemsync/AppTest.kt:110:92 Unnecessary non-null assertion (!!) on a non-null receiver of type 'ExoPlayer'.
 
 > Task :app:compileDebugAndroidTestJavaWithJavac NO-SOURCE
-> Task :app:dexBuilderDebugAndroidTest
+> Task :app:dexBuilderDebugAndroidTest UP-TO-DATE
 > Task :app:mergeDebugAndroidTestGlobalSynthetics UP-TO-DATE
 > Task :app:processDebugAndroidTestJavaRes UP-TO-DATE
 > Task :app:mergeDebugAndroidTestJavaResource UP-TO-DATE
-> Task :app:mergeProjectDexDebugAndroidTest
-> Task :app:packageDebugAndroidTest
+> Task :app:mergeProjectDexDebugAndroidTest UP-TO-DATE
+> Task :app:packageDebugAndroidTest UP-TO-DATE
 > Task :app:createDebugAndroidTestApkListingFileRedirect UP-TO-DATE
 > Task :app:lintAnalyzeDebugAndroidTest
-
+> Task :app:lintAnalyzeDebugUnitTest
+> Task :app:lintAnalyzeDebug
 > Task :app:connectedDebugAndroidTest
-Starting 5 tests on StemSyncTablet(AVD) - 15
-Starting 5 tests on StemSyncPhone(AVD) - 15
+Starting 6 tests on StemSyncPhone(AVD) - 15
+Starting 6 tests on StemSyncTablet(AVD) - 15
 
-StemSyncTablet(AVD) - 15 Tests 1/5 completed. (0 skipped) (0 failed)
-StemSyncPhone(AVD) - 15 Tests 3/5 completed. (0 skipped) (0 failed)
-StemSyncTablet(AVD) - 15 Tests 4/5 completed. (0 skipped) (0 failed)
-StemSyncPhone(AVD) - 15 Tests 4/5 completed. (0 skipped) (0 failed)
-Finished 5 tests on StemSyncPhone(AVD) - 15
-Finished 5 tests on StemSyncTablet(AVD) - 15
+StemSyncPhone(AVD) - 15 Tests 0/6 completed. (0 skipped) (0 failed)
+StemSyncTablet(AVD) - 15 Tests 0/6 completed. (0 skipped) (0 failed)
+StemSyncPhone(AVD) - 15 Tests 1/6 completed. (0 skipped) (0 failed)
+StemSyncPhone(AVD) - 15 Tests 2/6 completed. (0 skipped) (0 failed)
+StemSyncTablet(AVD) - 15 Tests 1/6 completed. (0 skipped) (0 failed)
+StemSyncPhone(AVD) - 15 Tests 3/6 completed. (0 skipped) (0 failed)
+StemSyncPhone(AVD) - 15 Tests 4/6 completed. (0 skipped) (0 failed)
+StemSyncTablet(AVD) - 15 Tests 2/6 completed. (0 skipped) (0 failed)
+StemSyncPhone(AVD) - 15 Tests 5/6 completed. (0 skipped) (0 failed)
+StemSyncTablet(AVD) - 15 Tests 3/6 completed. (0 skipped) (0 failed)
+StemSyncTablet(AVD) - 15 Tests 5/6 completed. (0 skipped) (0 failed)
+Finished 6 tests on StemSyncPhone(AVD) - 15
+Finished 6 tests on StemSyncTablet(AVD) - 15
 
 > Task :app:lintReportDebug UP-TO-DATE
 > Task :app:lintDebug
 
-BUILD SUCCESSFUL in 43s
-84 actionable tasks: 8 executed, 76 up-to-date
+BUILD SUCCESSFUL in 4m
+84 actionable tasks: 17 executed, 67 up-to-date

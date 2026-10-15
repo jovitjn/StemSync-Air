@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
             }
             StemSyncApp(state,vm,
                 host={ access("host") },join={ access("join") },reconnect={ access("reconnect") },
-                import={ picker.launch(arrayOf("audio/wav","audio/x-wav","audio/wave")) },
+                import={ picker.launch(arrayOf("*/*")) },
                 export={ exporter.launch("stemsync-diagnostics.csv") },
                 settings={ startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,"package:$packageName".toUri())) },
                 radios={ startActivity(Intent(Settings.ACTION_WIRELESS_SETTINGS)) })
@@ -74,5 +74,5 @@ class MainActivity : ComponentActivity() {
         when (action) { "host"->vm.hostSession(); "join"->vm.joinSession(); else->vm.reconnect() }
     }
     override fun onStart() { super.onStart(); vm.foreground(true) }
-    override fun onStop() { vm.foreground(false); super.onStop() }
+    override fun onStop() { if (!isChangingConfigurations) vm.foreground(false); super.onStop() }
 }

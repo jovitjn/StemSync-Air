@@ -1,13 +1,13 @@
-<?xml version='1.0' encoding='utf-8'?>
-<testsuite name="air.stemsync.AppTest" tests="5" failures="0" errors="0" skipped="0" time="25.051" timestamp="2026-10-15T07:20:19" hostname="validation-host">
+<testsuite name="air.stemsync.AppTest" tests="6" failures="0" errors="0" skipped="0" time="87.068" timestamp="2026-10-15T12:26:58" hostname="validation-host">
   <properties>
     <property name="device" value="StemSyncPhone(AVD) - 15" />
     <property name="flavor" value="" />
     <property name="project" value=":app" />
   </properties>
-  <testcase name="homeAndActionsAccessible" classname="air.stemsync.AppTest" time="3.61" />
-  <testcase name="helpAndSettingsVisible" classname="air.stemsync.AppTest" time="2.809" />
-  <testcase name="connectionErrorsAreVisible" classname="air.stemsync.AppTest" time="2.241" />
-  <testcase name="everyDemoStemDecodesWithMedia3" classname="air.stemsync.AppTest" time="2.899" />
-  <testcase name="hostPlaybackPauseSeekAndStemSwitch" classname="air.stemsync.AppTest" time="12.51" />
+  <testcase name="recreationPreservesPlaybackButTrueBackgroundPauses" classname="air.stemsync.AppTest" time="26.197" />
+  <testcase name="homeAndActionsAccessible" classname="air.stemsync.AppTest" time="6.153" />
+  <testcase name="helpAndSettingsVisible" classname="air.stemsync.AppTest" time="7.945" />
+  <testcase name="connectionErrorsAreVisible" classname="air.stemsync.AppTest" time="9.856" />
+  <testcase name="everyDemoStemDecodesWithMedia3" classname="air.stemsync.AppTest" time="12.1" />
+  <testcase name="hostPlaybackPauseSeekAndStemSwitch" classname="air.stemsync.AppTest" time="21.02" />
 </testsuite>

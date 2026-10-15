@@ -6,15 +6,29 @@ import kotlin.math.*
 /** theta is HOST minus GUEST. hostNow = guestNow + theta. All clocks are monotonic ns. */
 class ClockEstimator {
     data class Sample(val offsetNs: Double, val rttNs: Long, val receivedNs: Long)
+    enum class Quality { WARMING_UP, STALE, HIGH_RTT, HIGH_UNCERTAINTY, READY }
     private val samples = ArrayDeque<Sample>()
     var offsetNs = 0.0; private set
     var lastSampleNs: Long? = null; private set
     val count get() = samples.size
-    val ready get() = count >= 5
+    val ready get() = lastSampleNs?.let { quality(it) == Quality.READY } == true
     val rttMs get() = samples.map { it.rttNs / 1e6 }.average().takeIf { it.isFinite() }
     val jitterMs get() = rttMs?.let { mean -> sqrt(samples.sumOf { (it.rttNs / 1e6 - mean).pow(2) } / samples.size) }
+    private fun recent(nowNs: Long) = samples.filter { nowNs - it.receivedNs in 0..WINDOW_NS }
+    /** Conservative network timing budget, including applied-offset slew lag; not acoustic error. */
+    fun uncertaintyMs(nowNs: Long): Double? = recent(nowNs).takeLast(5).takeIf { it.isNotEmpty() }
+        ?.maxOf { it.rttNs / 2.0 + abs(it.offsetNs - offsetNs) }?.div(1e6)
+    fun quality(nowNs: Long): Quality {
+        val last = lastSampleNs ?: return Quality.WARMING_UP
+        if (nowNs-last !in 0..MAX_AGE_NS) return Quality.STALE
+        val latest = recent(nowNs).takeLast(5)
+        if (latest.size < 5) return Quality.WARMING_UP
+        if (latest.any { it.rttNs > MAX_RTT_NS }) return Quality.HIGH_RTT
+        if ((uncertaintyMs(nowNs) ?: Double.POSITIVE_INFINITY) > MAX_UNCERTAINTY_MS) return Quality.HIGH_UNCERTAINTY
+        return Quality.READY
+    }
     fun add(t1: Long, t2: Long, t3: Long, t4: Long, playing: Boolean = false): Boolean {
-        if (listOf(t1,t2,t3,t4).any { it < 0 } || t4 < t1 || t3 < t2) return false
+        if (listOf(t1,t2,t3,t4).any { it < 0 } || t4 < t1 || t3 < t2 || lastSampleNs?.let { t4 <= it } == true) return false
         val elapsed = t4 - t1
         val processing = t3 - t2
         if (elapsed > 5_000_000_000L || processing > elapsed) return false
@@ -22,16 +36,22 @@ class ClockEstimator {
         val theta = ((t2.toDouble() - t1) + (t3.toDouble() - t4)) / 2
         samples.addLast(Sample(theta, rtt, t4))
         while (samples.size > 24) samples.removeFirst()
-        // Median of the five lowest RTT samples limits queueing outliers.
-        val best = samples.sortedBy { it.rttNs }.take(5).map { it.offsetNs }.sorted()
+        // Prefer low-RTT samples only within the recent six-second window.
+        val best = recent(t4).sortedBy { it.rttNs }.take(5).map { it.offsetNs }.sorted()
         val estimate = best[best.size / 2]
         offsetNs = if (lastSampleNs == null || !playing) estimate else offsetNs + (estimate - offsetNs).coerceIn(-250_000.0, 250_000.0)
         lastSampleNs = t4
         return true
     }
     fun hostTime(localNs: Long) = localNs + offsetNs.toLong()
-    fun fresh(nowNs: Long) = ready && lastSampleNs?.let { nowNs - it in 0..10_000_000_000L } == true
+    fun fresh(nowNs: Long) = quality(nowNs) == Quality.READY
     fun clear() { samples.clear(); offsetNs = 0.0; lastSampleNs = null }
+    companion object {
+        const val WINDOW_NS = 6_000_000_000L
+        const val MAX_AGE_NS = 2_500_000_000L
+        const val MAX_RTT_NS = 150_000_000L
+        const val MAX_UNCERTAINTY_MS = 75.0
+    }
 }
 
 @Serializable

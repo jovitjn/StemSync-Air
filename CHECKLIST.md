@@ -4,7 +4,7 @@
 - [x] Media3 full mix and stems; host playback controls
 - [x] Clock estimator, future timeline, readiness, drift and recovery implementation
 - [x] Permissions, failure paths and responsive UI
-- [x] 64 unit tests, 10 emulator instrumentation executions, lint with no errors
+- [x] 84 unit tests, 12 emulator instrumentation executions, lint with no errors
 - [x] Package APK, source, test reports and hardware procedure
 - [ ] Complete manual virtual-device reconnect/cache, import and export acceptance checks
 - [ ] Run Samsung phone + tablet test with internet disconnected

@@ -108,7 +108,7 @@ private val Muted=Color(0xFFA8B7AD)
         if(s.role=="host") Row(horizontalArrangement=Arrangement.spacedBy(12.dp),verticalAlignment=Alignment.CenterVertically) {
             Button(onClick=vm::playPause,enabled=s.prepared && !s.busy,modifier=Modifier.weight(1f).height(56.dp)) { Text(if(s.playing) "Pause" else "Play together",fontSize=18.sp) }
             OutlinedButton(onClick=vm::stop,enabled=s.tracks.isNotEmpty()) { Text("Stop") }
-        } else Text(if(s.prepared && s.syncReady) "Ready · following the host" else "Preparing files and timing…",color=Amber)
+        } else Text(if(s.sessionReady) "Ready · following the host" else if(s.prepared && !s.syncReady) s.timingStatus else "Preparing files and timing…",color=Amber)
         Text("THIS SPEAKER",fontSize=11.sp,letterSpacing=2.sp,color=Muted,modifier=Modifier.padding(top=12.dp))
         FlowRow(horizontalArrangement=Arrangement.spacedBy(8.dp)) {
             s.tracks.forEach { track -> FilterChip(selected=s.selected==track.id,onClick={vm.select(track.id)},enabled=track.id in s.cachedIds,label={Text(track.stem)}) }
@@ -141,7 +141,7 @@ private val Muted=Color(0xFFA8B7AD)
     Column(verticalArrangement=Arrangement.spacedBy(18.dp)) {
         Text("Between the speakers",fontSize=28.sp,fontWeight=FontWeight.SemiBold)
         Text("Live observations from this connection. No acoustic measurement is available.",color=Muted)
-        val metrics=listOf("Connection" to s.status,"Mean message RTT" to metric(s.rtt,"ms"),"RTT variation (population SD)" to metric(s.jitter,"ms"),"Estimated host − guest clock" to metric(s.offset,"ms"),"Last clock sample" to metric(s.syncAge,"s ago"),"Estimated playback timeline error" to (s.timelineError?.let{"$it ms"} ?: "Not measured"),"Last file transfer throughput" to metric(s.throughput,"MiB/s"),"Reconnections" to s.reconnects.toString())
+        val metrics=listOf("Connection" to s.status,"Mean message RTT" to metric(s.rtt,"ms"),"RTT variation (population SD)" to metric(s.jitter,"ms"),"Estimated host − guest clock" to metric(s.offset,"ms"),"Last clock sample" to metric(s.syncAge,"s ago"),"Network timing uncertainty budget" to metric(s.timingUncertainty,"ms"),"Timing readiness" to s.timingStatus,"Estimated playback timeline error" to (s.timelineError?.let{"$it ms"} ?: "Not measured"),"Last file transfer throughput" to metric(s.throughput,"MiB/s"),"Reconnections" to s.reconnects.toString())
         metrics.forEach { (name,value) -> Column { Text(name,color=Muted,fontSize=12.sp); Text(value,fontSize=18.sp); HorizontalDivider(Modifier.padding(top=12.dp),color=Muted.copy(alpha=.15f)) } }
         Text("RTT and offset are measured on the guest. Nearby chooses the local transport; its radio type is not exposed here. Player position excludes unknown speaker and output-buffer latency.",color=Muted,fontSize=12.sp)
         OutlinedButton(onClick=export) { Text("Export diagnostics") }
@@ -156,8 +156,8 @@ private val Muted=Color(0xFFA8B7AD)
         Text("${s.calibrationMs.roundToInt()} ms · positive delays this device",color=Amber)
         Slider(value=s.calibrationMs,onValueChange=vm::calibrate,valueRange=-300f..300f,steps=119)
         Text("If this speaker sounds early, add delay in small steps. Use the same drum stem on both devices, listen halfway between them, and adjust until the double hit is reduced. This is a listening adjustment, not a measurement.",color=Muted)
-        Text("Imports: up to six aligned, 16-bit PCM WAV files, 100 MiB each. Multiple files must share duration and sample rate and are treated as stems. Alignment remains your responsibility.",color=Muted)
-        Text("StemSync Air 0.1 · one host + one guest\nOriginal demo: Afterglow on the lake\nOffline file distribution followed by local playback. Google Play services required. Acoustic synchronization varies by device. Background playback is not supported.",fontSize=12.sp,color=Muted)
+        Text("Imports: up to six aligned, 16-bit PCM WAV files, 100 MiB each. Multiple files must share exact PCM frame count and sample rate and are treated as stems. Alignment remains your responsibility.",color=Muted)
+        Text("StemSync Air 0.2 · one host + one guest\nOriginal demo: Afterglow on the lake\nOffline file distribution followed by local playback. Google Play services required. Acoustic synchronization varies by device. Background playback is not supported.",fontSize=12.sp,color=Muted)
     }
 }
 private fun time(ms: Long)="%d:%02d".format(ms/60000,(ms/1000)%60)

@@ -1,16 +1,15 @@
-<?xml version='1.0' encoding='utf-8'?>
-<testsuite name="air.stemsync.core.SessionTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-15T07:18:06.977Z" hostname="validation-host" time="0.035">
+<testsuite name="air.stemsync.core.SessionTest" tests="10" skipped="0" failures="0" errors="0" timestamp="2026-10-15T12:24:13.244Z" hostname="validation-host" time="0.004">
   <properties />
   <testcase name="successWithoutUserConsentRejected" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="authenticatedGuestCanExchange" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="hostDepartureClearsAllConnections" classname="air.stemsync.core.SessionTest" time="0.0" />
-  <testcase name="allPreparedAllowsStart" classname="air.stemsync.core.SessionTest" time="0.005" />
-  <testcase name="newHostHasNoImplicitGuests" classname="air.stemsync.core.SessionTest" time="0.001" />
-  <testcase name="guestsCannotPublishTimelineOrManifest" classname="air.stemsync.core.SessionTest" time="0.027" />
+  <testcase name="allPreparedAllowsStart" classname="air.stemsync.core.SessionTest" time="0.001" />
+  <testcase name="newHostHasNoImplicitGuests" classname="air.stemsync.core.SessionTest" time="0.0" />
+  <testcase name="guestsCannotPublishTimelineOrManifest" classname="air.stemsync.core.SessionTest" time="0.001" />
   <testcase name="unpreparedParticipantBlocksStart" classname="air.stemsync.core.SessionTest" time="0.0" />
   <testcase name="guestDisconnectRevokesConsent" classname="air.stemsync.core.SessionTest" time="0.0" />
-  <testcase name="remoteRejectionPreventsExchange" classname="air.stemsync.core.SessionTest" time="0.001" />
-  <testcase name="unpreparedHostBlocksStart" classname="air.stemsync.core.SessionTest" time="0.0" />
+  <testcase name="remoteRejectionPreventsExchange" classname="air.stemsync.core.SessionTest" time="0.0" />
+  <testcase name="unpreparedHostBlocksStart" classname="air.stemsync.core.SessionTest" time="0.001" />
   <system-out />
   <system-err />
 </testsuite>
