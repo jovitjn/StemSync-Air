@@ -102,7 +102,29 @@ See [the validation record](docs/VALIDATION.md), [Samsung acceptance procedure](
 - Diagnostic export is a snapshot rather than a continuous raw timestamp trace.
 - No physical discovery, throughput, reconnect or acoustic measurements have been fabricated.
 
-Next useful work is Samsung validation, raw diagnostic traces, measured calibration, persistent library controls, and only then extending the participant count or considering continuous streaming.
+## Roadmap: multi-device sessions
+
+The current tested release supports one host and one guest. The next milestone is a one-host, many-guest session over the same offline Nearby Connections `P2P_STAR` topology.
+
+Planned work:
+
+- Replace the explicit single-guest cap with per-participant authentication, transfer, readiness, acknowledgement and reconnect state.
+- Maintain an independent RTT, clock-offset and uncertainty estimate for every connected device.
+- Fan out verified music files while keeping slow or disconnected guests from corrupting another participant's state.
+- Add a readiness barrier so the host can see which speakers are prepared before starting playback.
+- Recalculate timing whenever the host plays, pauses, seeks or changes songs. Each command will carry a new revision, target song position and future host-clock deadline. Every guest will translate that deadline through its own clock estimate, seek to the requested position, acknowledge readiness and begin at the shared deadline.
+- Choose the deadline from current per-device timing quality plus a safety margin. A guest that cannot meet the deadline will remain paused and resynchronize instead of starting late without warning.
+- Test duplicate and reordered commands, guest churn, simultaneous transfers, changing link delay and partial-session recovery before claiming multi-device support.
+
+Nearby may use Bluetooth, Bluetooth Low Energy, Wi-Fi or another local transport selected by Google Play services. The app will continue to require Bluetooth and Wi-Fi to be enabled, but it will not claim that every transfer uses Bluetooth when the SDK does not expose that choice.
+
+This roadmap is a design target, not functionality in version 0.2.1. The shipped and validated scope remains one host plus one guest.
+
+## CV-ready project description
+
+> Built StemSync Air, a Kotlin/Jetpack Compose Android application for authenticated offline music transfer and synchronized playback between nearby devices. Implemented Nearby Connections file exchange, SHA-256 integrity verification, monotonic clock-offset/RTT estimation, future-timestamped playback commands, drift correction, MP3-to-PCM conversion, Media3 playback, responsive phone/tablet UI, and 100 automated test executions across unit and emulator suites. Designing the next release for one-host/multi-guest sessions with per-device latency estimation and barrier-scheduled seek synchronization.
+
+This wording deliberately separates implemented work from the planned multi-device release.
 
 ## License
 
