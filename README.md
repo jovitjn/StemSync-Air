@@ -10,6 +10,8 @@ I built StemSync Air around a question that connects my interests in music, wire
 
 **Status:** version 0.2.1 installable debug build; implementation and automated validation are documented in [VALIDATION.md](docs/VALIDATION.md). Physical Samsung phone/tablet acceptance and acoustic synchronization remain unverified. No sample-perfect or zero-latency claim is made.
 
+**Development update — 16 October 2026:** I have completed the next multi-device implementation in a separate working copy. It removes the permanent host/guest control hierarchy, introduces an elected session coordinator, and uses per-device timing plus a prepare/commit barrier for synchronized song changes and seeking. A teammate is currently verifying that build. The verified source and replacement APK have not been published here yet, so the download below remains the tested two-device v0.2.1 build. The new design is documented in [MULTI-DEVICE.md](docs/MULTI-DEVICE.md).
+
 ## Download
 
 [Download StemSync Air v0.2.1 for Android](distribution/StemSync-Air-v0.2.1-debug.apk)
@@ -124,23 +126,24 @@ See [the validation record](docs/VALIDATION.md), [Samsung acceptance procedure](
 - Diagnostic export is a snapshot rather than a continuous raw timestamp trace.
 - No physical discovery, throughput, reconnect or acoustic measurements have been fabricated.
 
-## Roadmap: multi-device sessions
+## Next release: multi-device sessions
 
-The current tested release supports one host and one guest. The next milestone is a one-host, many-guest session over the same offline Nearby Connections `P2P_STAR` topology.
+The current public release supports one host and one guest. The next implementation has been completed in a separate working copy and is now under teammate verification. It treats every connected device as an equal participant while electing one temporary coordinator to order commands and provide the reference clock.
 
-Planned work:
+Implemented in the release candidate:
 
-- Replace the explicit single-guest cap with per-participant authentication, transfer, readiness, acknowledgement and reconnect state.
-- Maintain an independent RTT, clock-offset and uncertainty estimate for every connected device.
-- Fan out verified music files while keeping slow or disconnected guests from corrupting another participant's state.
-- Add a readiness barrier so the host can see which speakers are prepared before starting playback.
-- Recalculate timing whenever the host plays, pauses, seeks or changes songs. Each command will carry a new revision, target song position and future host-clock deadline. Every guest will translate that deadline through its own clock estimate, seek to the requested position, acknowledge readiness and begin at the shared deadline.
-- Choose the deadline from current per-device timing quality plus a safety margin. A guest that cannot meet the deadline will remain paused and resynchronize instead of starting late without warning.
-- Test duplicate and reordered commands, guest churn, simultaneous transfers, changing link delay and partial-session recovery before claiming multi-device support.
+- Multiple authenticated participants with independent transfer, readiness, acknowledgement and reconnect state.
+- Equal playback-control requests from any participant, serialized by an elected session coordinator.
+- Independent RTT, clock-offset and uncertainty estimates relative to the coordinator.
+- Revisioned prepare/commit commands for play, pause, seeking and song changes.
+- A readiness barrier that seeks and prepares every device before selecting a shared future start deadline.
+- Term and revision checks that reject commands from an old coordinator or an older playback action.
+- Coordinator re-election and fresh timing measurements when the current coordinator leaves.
+- Isolation of slow or disconnected participants so they cannot corrupt another device's session state.
 
 Nearby may use Bluetooth, Bluetooth Low Energy, Wi-Fi or another local transport selected by Google Play services. The app will continue to require Bluetooth and Wi-Fi to be enabled, but it will not claim that every transfer uses Bluetooth when the SDK does not expose that choice.
 
-This roadmap is a design target, not functionality in version 0.2.1. The shipped and validated scope remains one host plus one guest.
+Publication remains gated on teammate verification, source review, multi-device hardware testing and a replacement APK. Until those artifacts are committed, the shipped and validated scope in this repository remains one host plus one guest.
 
 ## License
 
